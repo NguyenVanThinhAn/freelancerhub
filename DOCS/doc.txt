@@ -1,0 +1,2082 @@
+FREELANCEHUB AI
+ĐẶC TẢ DỮ LIỆU VÀ MỐI QUAN HỆ HỆ THỐNG
+Data Model & System Relationship Specification
+
+Thuộc tính
+Nội dung
+Phiên bản
+1.0
+Trạng thái
+Bản đặc tả độc lập để bàn giao Dev phân tích và thiết kế hệ thống
+Phạm vi
+MVP FreelancerHub AI: Main Web + Admin Portal dùng chung Backend/API và Database
+Ngày phát hành
+30/07/2026
+Đối tượng sử dụng
+Frontend Dev, Backend Dev, Database Designer, QA, Product/BA
+
+Mục tiêu tài liệu Khóa cách hiểu về thực thể, trường dữ liệu, quan hệ, trạng thái nghiệp vụ và ranh giới tích hợp. Đây không phải migration script cuối cùng; Dev có thể dùng làm cơ sở thiết kế ERD vật lý, API contract và backlog triển khai.
+
+TÀI LIỆU NỘI BỘ DỰ ÁN — DÙNG CHO PHÂN TÍCH VÀ TRIỂN KHAI MVP
+
+0. Kiểm soát tài liệu
+Mục
+Quy định
+Owner nghiệp vụ
+Product Owner / Business Analyst của FreelancerHub AI
+Owner kỹ thuật
+Technical Lead / Backend Lead
+Hệ quản trị dữ liệu tham chiếu
+PostgreSQL 15+; Object Storage cho file; Redis tùy nhu cầu session/cache
+Quy ước API
+REST/JSON; version prefix /api/v1; JWT access token + refresh session
+Nguyên tắc kiến trúc
+Hai frontend tách deploy; Backend/API và dữ liệu dùng chung; frontend không truy cập DB trực tiếp
+Quy tắc thay đổi
+Mọi thay đổi tên entity, khóa ngoại, enum trạng thái hoặc permission phải được Product + Tech Lead xác nhận
+
+0.1 Nguồn đầu vào
+	•	Project-Instructions.txt: phạm vi sản phẩm marketplace giữa Doanh nghiệp và Freelancer, có AI, hợp đồng, ký quỹ, tranh chấp và uy tín hai chiều.
+	•	[KHỞI NGUYÊN] ĐỀ BÀI VÒNG 3.pdf: yêu cầu MVP tương tác thực tế, kiến trúc hệ thống, ERD, tech stack, xác thực, phân quyền, bảo vệ dữ liệu và tài khoản demo.
+	•	Bộ mockup đã duyệt cho các nhóm Authentication, Doanh nghiệp, Freelancer, Admin và màn hình dùng chung.
+	•	Quyết định kiến trúc mới: Admin Portal là website riêng, nhưng liên kết thời gian thực với hoạt động trên sàn chính thông qua Backend/API và Database chung.
+0.2 Các thuật ngữ
+Thuật ngữ
+Ý nghĩa trong tài liệu
+Main Web
+Website sàn dành cho Doanh nghiệp và Freelancer.
+Admin Portal
+Website quản trị riêng dành cho Super Admin, Moderator, Support, Finance Admin và AI Ops.
+Shared Backend
+Một lớp API và business rules dùng chung cho Main Web và Admin Portal.
+Subject
+Đối tượng được xác minh hoặc báo cáo; có thể là User, Organization, Job, Message hoặc Contract.
+Soft delete
+Không xóa vật lý ngay; đánh dấu deleted_at để giữ lịch sử và audit.
+MVP
+Phiên bản đủ để demo happy path; thanh toán/ký quỹ dùng sandbox hoặc mô phỏng có kiểm soát.
+
+1. Quyết định kiến trúc tổng thể
+Architecture Decision AD-01 Admin Portal được tách thành một frontend độc lập. Main Web và Admin Portal không dùng hai database riêng; cả hai chỉ gọi Shared Backend API. Backend thực hiện xác thực, kiểm tra permission, business rules, transaction và audit log.
+
+
+Hình 1. Kiến trúc mục tiêu: hai frontend độc lập, một backend và một nguồn dữ liệu dùng chung.
+1.1 Ranh giới trách nhiệm
+Thành phần
+Được phép
+Không được phép
+Main Web
+Hiển thị và thao tác nghiệp vụ của Doanh nghiệp/Freelancer qua API.
+Truy cập bảng Admin, ghi số dư trực tiếp hoặc tự phê duyệt KYC/job.
+Admin Portal
+Gọi API /admin theo permission; duyệt, khóa, xử lý, giám sát và xem audit.
+Kết nối DB trực tiếp hoặc bỏ qua business rule của Backend.
+Backend API
+Xác thực, RBAC, validation, transaction, audit, tích hợp AI/email/payment sandbox.
+Tin tưởng dữ liệu/role gửi từ frontend mà không kiểm tra lại.
+Database
+Lưu nguồn dữ liệu chuẩn, ràng buộc khóa, unique, check và lịch sử cần thiết.
+Chứa plaintext password/token hoặc cho frontend public credential.
+
+1.2 Nguyên tắc dữ liệu bắt buộc
+	•	Mỗi thực thể nghiệp vụ có một khóa chính UUID ổn định, không tái sử dụng.
+	•	Mọi timestamp lưu dưới dạng UTC (timestamptz); frontend chuyển về múi giờ người dùng.
+	•	Email được chuẩn hóa lowercase và unique; số điện thoại chuẩn hóa theo E.164 nếu triển khai OTP.
+	•	Password chỉ lưu password_hash; verification/reset/refresh token chỉ lưu hash và thời hạn.
+	•	Tiền lưu bằng numeric(18,2) kèm currency CHAR(3); MVP mặc định VND.
+	•	Các thao tác nhạy cảm của Admin phải sinh audit_logs trong cùng transaction hoặc outbox đáng tin cậy.
+	•	File CV, portfolio, bằng chứng tranh chấp không lưu trực tiếp trong DB; DB chỉ lưu metadata và object storage key/URL ký hạn.
+	•	Không dùng JSONB thay thế toàn bộ mô hình quan hệ; JSONB chỉ dùng cho metadata, snapshot và explanation có cấu trúc linh hoạt.
+2. Phạm vi mô hình dữ liệu
+Miền dữ liệu
+Chức năng chính
+Mức ưu tiên
+Identity & Access
+Đăng ký, đăng nhập, xác thực email, reset password, OAuth, session, role/permission.
+P0
+Profiles & Trust
+Hồ sơ Freelancer, tổ chức/doanh nghiệp, kỹ năng, portfolio, KYC, Trust Passport.
+P0/P1
+Marketplace
+Job, kỹ năng yêu cầu, AI matching, proposal, phỏng vấn.
+P1
+Contracts & Delivery
+Hợp đồng, milestone, bàn giao, nghiệm thu.
+P1
+Finance & Disputes
+Ký quỹ, giao dịch, hoàn tiền, tranh chấp, bằng chứng, rating.
+P1/P2
+Communication
+Conversation, message, notification.
+P1
+Governance & AI Ops
+Content report, audit log, AI usage/quota, moderation.
+P1
+
+2.1 Quy ước chung cho tất cả bảng
+Trường chuẩn
+Kiểu
+Quy tắc
+id
+uuid
+Primary key; gen_random_uuid().
+created_at
+timestamptz
+NOT NULL DEFAULT now().
+updated_at
+timestamptz
+NOT NULL; cập nhật bằng application hoặc trigger.
+deleted_at
+timestamptz NULL
+Soft delete cho entity cần khôi phục/lịch sử.
+created_by / updated_by
+uuid NULL
+Bắt buộc cho entity do Admin thao tác hoặc cần truy vết.
+metadata
+jsonb NULL
+Chỉ bổ sung dữ liệu linh hoạt; không chứa secret hoặc dữ liệu cốt lõi cần query thường xuyên.
+
+3. ERD logic cấp hệ thống
+Sơ đồ dưới đây là ERD logic để thống nhất mối quan hệ. Dev có thể tách schema vật lý theo module nhưng không được phá vỡ các khóa và cardinality cốt lõi.
+
+
+Hình 2A. Identity & Access
+
+Hình 2B. Profiles & Trust
+
+Hình 2C. Marketplace & AI
+
+
+Hình 2D. Contracts & Delivery
+
+Hình 2E. Finance & Disputes
+
+Hình 2F. Communication & Governance
+
+
+Cách đọc sơ đồ Các bảng nối N:N dùng bảng trung gian. Các quan hệ polymorphic như verification_requests và content_reports phải được kiểm soát bằng service validation hoặc tách bảng khi dữ liệu tăng lớn. Quan hệ chính xác ở mức cột được mô tả trong Data Dictionary.
+
+3.1 Ma trận quan hệ cốt lõi
+Parent
+Child
+Cardinality
+Ràng buộc nghiệp vụ
+Delete/Update rule
+users
+user_roles
+1:N
+Một user có thể có nhiều role; unique(user_id, role_id).
+CASCADE khi xóa user logic; role không xóa nếu đang dùng.
+roles
+role_permissions
+1:N
+Role nhận nhiều permission; unique(role_id, permission_id).
+RESTRICT role/permission đang dùng.
+users
+freelancer_profiles
+1:0..1
+Chỉ user có role freelancer mới được tạo profile.
+PK/FK user_id; CASCADE theo user.
+organizations
+organization_members
+1:N
+Một tổ chức có owner và thành viên.
+Không cho xóa owner cuối cùng.
+organizations
+jobs
+1:N
+Job thuộc một tổ chức.
+RESTRICT khi có contract; soft delete.
+jobs
+proposals
+1:N
+Freelancer gửi proposal cho job.
+Unique(job_id, freelancer_id) nếu chỉ cho một proposal hoạt động.
+jobs + freelancer_profiles
+match_results
+1:N + 1:N
+Kết quả AI matching theo từng job-freelancer-model version.
+Unique(job_id, freelancer_id, model_version).
+proposals
+contracts
+1:0..1
+Proposal được chấp nhận sinh tối đa một contract.
+Unique(proposal_id).
+contracts
+milestones
+1:N
+Milestone có thứ tự và tổng amount phải khớp contract.
+Unique(contract_id, sequence_no).
+contracts
+escrow_accounts
+1:1
+Một hợp đồng có một tài khoản ký quỹ logic.
+Unique(contract_id).
+escrow_accounts
+transactions
+1:N
+Mọi nạp/giải ngân/hoàn tiền là ledger transaction.
+Không update amount sau posted; dùng reversal.
+contracts/milestones
+disputes
+1:N
+Tranh chấp có thể gắn contract hoặc milestone.
+Phải có ít nhất contract_id; milestone phải thuộc contract.
+conversations
+messages
+1:N
+Message chỉ thuộc một conversation.
+Không hard delete; dùng redacted_at cho kiểm duyệt.
+users
+audit_logs
+1:N
+Admin/user/service là actor của hành động.
+Append-only; không sửa/xóa từ ứng dụng.
+
+4. Data Dictionary — Identity & Access (P0)
+P0 cho Nhóm 1 Authentication Các bảng trong mục này phải được Dev phân tích và khóa trước khi nối 9 màn hình Authentication. Đây là nền móng dùng chung cho Main Web và Admin Portal.
+
+4.1 Bảng users
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK, NOT NULL
+Định danh user.
+email
+citext/varchar(255)
+UNIQUE, NOT NULL
+Email đăng nhập đã normalize lowercase.
+password_hash
+varchar(255)
+NULL với OAuth-only
+Hash Argon2id/bcrypt; tuyệt đối không lưu plaintext.
+status
+user_status
+NOT NULL DEFAULT pending_verification
+pending_verification, active, suspended, locked, deleted.
+email_verified_at
+timestamptz
+NULL
+Thời điểm xác thực email.
+phone_e164
+varchar(20)
+UNIQUE NULL
+Số điện thoại chuẩn hóa nếu sử dụng.
+phone_verified_at
+timestamptz
+NULL
+Dự phòng OTP.
+last_login_at
+timestamptz
+NULL
+Cập nhật sau login thành công.
+failed_login_count
+smallint
+DEFAULT 0
+Phục vụ lockout/risk rule.
+locked_until
+timestamptz
+NULL
+Khóa tạm sau nhiều lần sai.
+locale
+varchar(10)
+DEFAULT vi-VN
+Ngôn ngữ UI.
+timezone
+varchar(50)
+DEFAULT Asia/Ho_Chi_Minh
+Múi giờ hiển thị.
+created_at/updated_at/deleted_at
+timestamptz
+Theo quy ước
+Audit vòng đời.
+
+4.2 Bảng roles
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Định danh role.
+code
+varchar(50)
+UNIQUE, NOT NULL
+freelancer, business_owner, moderator, support, finance_admin, ai_ops, super_admin.
+name
+varchar(100)
+NOT NULL
+Tên hiển thị.
+is_system
+boolean
+DEFAULT true
+Role hệ thống không cho xóa tùy tiện.
+
+4.3 Bảng permissions
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Định danh permission.
+code
+varchar(100)
+UNIQUE, NOT NULL
+Ví dụ job.approve, user.lock, dispute.resolve.
+module
+varchar(50)
+NOT NULL
+Nhóm chức năng.
+description
+text
+NULL
+Mô tả nghiệp vụ.
+
+4.4 Bảng user_roles
+Field
+Type
+Constraint
+Business meaning
+user_id
+uuid
+PK/FK users
+Thành phần khóa ghép.
+role_id
+uuid
+PK/FK roles
+Thành phần khóa ghép.
+scope_type
+varchar(30)
+NULL
+platform hoặc organization.
+scope_id
+uuid
+NULL
+Organization ID nếu role giới hạn phạm vi.
+assigned_by
+uuid
+FK users NULL
+Ai gán role.
+assigned_at
+timestamptz
+DEFAULT now()
+Thời điểm gán.
+
+4.5 Bảng auth_sessions
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Session/refresh family ID.
+user_id
+uuid
+FK users, NOT NULL
+Chủ session.
+refresh_token_hash
+varchar(255)
+UNIQUE, NOT NULL
+Chỉ lưu hash.
+device_name
+varchar(120)
+NULL
+Tên thiết bị/browser.
+ip_address
+inet
+NULL
+Dùng risk/audit, hạn chế truy cập.
+user_agent
+text
+NULL
+Thông tin client.
+expires_at
+timestamptz
+NOT NULL
+Hết hạn refresh.
+revoked_at
+timestamptz
+NULL
+Logout/force revoke.
+last_used_at
+timestamptz
+NULL
+Theo dõi rotation.
+
+4.6 Bảng email_verification_tokens
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Token record.
+user_id
+uuid
+FK users, NOT NULL
+User cần xác minh.
+token_hash
+varchar(255)
+UNIQUE, NOT NULL
+Hash token gửi email.
+expires_at
+timestamptz
+NOT NULL
+Đề xuất 24 giờ; cấu hình.
+consumed_at
+timestamptz
+NULL
+Không cho dùng lại.
+sent_to_email
+varchar(255)
+NOT NULL
+Snapshot email đích.
+
+4.7 Bảng password_reset_tokens
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Reset record.
+user_id
+uuid
+FK users, NOT NULL
+User yêu cầu reset.
+token_hash
+varchar(255)
+UNIQUE, NOT NULL
+Hash token.
+expires_at
+timestamptz
+NOT NULL
+Đề xuất 15-30 phút; cấu hình.
+consumed_at
+timestamptz
+NULL
+Không cho dùng lại.
+requested_ip
+inet
+NULL
+Risk/audit.
+
+4.8 Bảng oauth_accounts
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Liên kết OAuth.
+user_id
+uuid
+FK users, NOT NULL
+Chủ tài khoản.
+provider
+varchar(30)
+NOT NULL
+google, linkedin.
+provider_user_id
+varchar(255)
+NOT NULL
+ID từ provider.
+provider_email
+varchar(255)
+NULL
+Snapshot email.
+access_token_encrypted
+text
+NULL
+Chỉ lưu khi thực sự cần; mã hóa.
+refresh_token_encrypted
+text
+NULL
+Mã hóa, hạn chế quyền.
+UNIQUE
+(provider, provider_user_id)
+Bắt buộc
+Không liên kết trùng.
+
+4.9 Luồng dữ liệu Authentication
+
+Hình 3. Luồng đăng ký và xác thực email cho cả Freelancer và Doanh nghiệp.
+Bước
+Bảng đọc/ghi
+Transaction/Rule
+Chọn role
+Không ghi DB; có thể lưu client state
+Backend không tin role từ client nếu endpoint không cho phép.
+Submit đăng ký
+Read users; Insert users, user_roles
+Một transaction; unique email; hash password.
+Tạo profile
+Insert freelancer_profiles hoặc organizations + organization_members
+Nếu lỗi phải rollback toàn bộ đăng ký.
+Gửi xác thực
+Insert email_verification_tokens
+Lưu hash; rate limit resend.
+Verify email
+Update token consumed_at; users.email_verified_at + status
+Atomic transaction, idempotent.
+Đăng nhập
+Read users; Insert/rotate auth_sessions; update last_login_at
+Không trả lý do phân biệt email tồn tại hay không ở forgot-password.
+Reset password
+Consume password_reset_tokens; update password_hash; revoke sessions
+Atomic; bắt buộc đăng nhập lại.
+
+5. Data Dictionary — Profiles & Trust
+5.1 Bảng freelancer_profiles
+Field
+Type
+Constraint
+Business meaning
+user_id
+uuid
+PK/FK users
+Hồ sơ 1:1 với user Freelancer.
+display_name
+varchar(150)
+NOT NULL
+Tên công khai.
+headline
+varchar(200)
+NULL
+Chức danh ngắn.
+bio
+text
+NULL
+Giới thiệu.
+experience_years
+numeric(4,1)
+DEFAULT 0
+Số năm kinh nghiệm.
+hourly_rate
+numeric(18,2)
+NULL
+Mức mong muốn.
+currency
+char(3)
+DEFAULT VND
+Đơn vị tiền.
+availability_status
+varchar(30)
+DEFAULT available
+available, limited, unavailable.
+profile_completion
+smallint
+0..100
+Tính bởi service.
+cv_storage_key
+text
+NULL
+Object storage key của CV.
+parsed_cv_json
+jsonb
+NULL
+Kết quả parsing được user duyệt.
+
+5.2 Bảng organizations
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Định danh doanh nghiệp/tổ chức.
+name
+varchar(200)
+NOT NULL
+Tên doanh nghiệp.
+slug
+varchar(220)
+UNIQUE
+URL/public identifier.
+tax_code
+varchar(30)
+UNIQUE NULL
+Mã số thuế nếu thu thập.
+website
+text
+NULL
+Website.
+description
+text
+NULL
+Giới thiệu.
+verification_status
+verification_status
+DEFAULT unverified
+unverified, pending, verified, rejected, expired.
+owner_user_id
+uuid
+FK users
+Owner chính; đồng thời có organization_members.
+
+5.3 Bảng organization_members
+Field
+Type
+Constraint
+Business meaning
+organization_id
+uuid
+PK/FK organizations
+Khóa ghép.
+user_id
+uuid
+PK/FK users
+Khóa ghép.
+member_role
+varchar(30)
+NOT NULL
+owner, admin, recruiter, viewer.
+status
+varchar(20)
+DEFAULT active
+invited, active, suspended.
+invited_by
+uuid
+FK users NULL
+Người mời.
+
+5.4 Bảng skills
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Danh mục chuẩn.
+name
+varchar(120)
+UNIQUE
+Tên kỹ năng.
+category
+varchar(100)
+NULL
+Nhóm kỹ năng.
+is_active
+boolean
+DEFAULT true
+Cho phép dùng.
+
+5.5 Bảng freelancer_skills
+Field
+Type
+Constraint
+Business meaning
+freelancer_id
+uuid
+PK/FK freelancer_profiles.user_id
+Freelancer.
+skill_id
+uuid
+PK/FK skills
+Kỹ năng.
+level
+smallint
+1..5
+Mức tự khai/xác minh.
+years_experience
+numeric(4,1)
+NULL
+Kinh nghiệm.
+is_verified
+boolean
+DEFAULT false
+Được xác minh bởi chứng chỉ/project.
+
+5.6 Bảng portfolio_items
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Portfolio item.
+freelancer_id
+uuid
+FK freelancer_profiles
+Chủ sở hữu.
+title
+varchar(200)
+NOT NULL
+Tên dự án.
+description
+text
+NULL
+Mô tả.
+asset_storage_key
+text
+NULL
+File/ảnh.
+external_url
+text
+NULL
+Link ngoài.
+visibility
+varchar(20)
+DEFAULT public
+public, private, unlisted.
+
+5.7 Bảng verification_requests
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Phiếu xác minh.
+subject_type
+varchar(30)
+NOT NULL
+user, organization, credential.
+subject_id
+uuid
+NOT NULL
+ID đối tượng.
+verification_type
+varchar(30)
+NOT NULL
+identity, business, education, certificate.
+status
+verification_status
+DEFAULT submitted
+submitted, in_review, approved, rejected, expired.
+document_storage_keys
+jsonb
+NOT NULL
+Danh sách tài liệu.
+reviewed_by
+uuid
+FK users NULL
+Admin reviewer.
+review_note
+text
+NULL
+Lý do/ghi chú.
+
+5.8 Bảng trust_passports
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Trust Passport.
+user_id
+uuid
+UNIQUE FK users
+Chủ passport.
+overall_score
+numeric(5,2)
+0..100
+Điểm tổng hợp.
+identity_score
+numeric(5,2)
+0..100
+Điểm xác minh.
+delivery_score
+numeric(5,2)
+0..100
+Điểm hoàn thành.
+rating_score
+numeric(5,2)
+0..100
+Điểm đánh giá.
+risk_score
+numeric(5,2)
+0..100
+Điểm rủi ro; càng cao càng rủi ro.
+status
+varchar(20)
+DEFAULT active
+active, review, restricted.
+score_version
+varchar(30)
+NOT NULL
+Phiên bản công thức.
+explanation_json
+jsonb
+NOT NULL
+Giải thích minh bạch.
+
+6. Data Dictionary — Marketplace & AI Matching
+6.1 Bảng jobs
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Job.
+organization_id
+uuid
+FK organizations, NOT NULL
+Doanh nghiệp đăng.
+created_by
+uuid
+FK users
+Recruiter tạo.
+title
+varchar(200)
+NOT NULL
+Tiêu đề.
+description
+text
+NOT NULL
+JD đã được human review.
+employment_type
+varchar(30)
+NOT NULL
+project, part_time, full_time, internship.
+budget_min/max
+numeric(18,2)
+NULL
+Khoảng ngân sách.
+currency
+char(3)
+DEFAULT VND
+Tiền tệ.
+experience_level
+varchar(30)
+NULL
+junior, mid, senior, expert.
+status
+job_status
+DEFAULT draft
+draft, pending_review, published, paused, closed, rejected.
+moderation_note
+text
+NULL
+Lý do duyệt/từ chối.
+published_at
+timestamptz
+NULL
+Thời điểm công khai.
+
+6.2 Bảng job_skills
+Field
+Type
+Constraint
+Business meaning
+job_id
+uuid
+PK/FK jobs
+Job.
+skill_id
+uuid
+PK/FK skills
+Kỹ năng.
+is_required
+boolean
+DEFAULT true
+Bắt buộc hay ưu tiên.
+weight
+numeric(5,2)
+0..100
+Trọng số matching.
+minimum_level
+smallint
+1..5 NULL
+Mức tối thiểu.
+
+6.3 Bảng match_results
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Kết quả matching.
+job_id
+uuid
+FK jobs
+Job.
+freelancer_id
+uuid
+FK freelancer_profiles
+Freelancer.
+overall_score
+numeric(5,2)
+0..100
+Điểm tổng.
+skill_score/experience_score/trust_score
+numeric(5,2)
+0..100
+Điểm thành phần.
+explanation_json
+jsonb
+NOT NULL
+Lý do phù hợp, gap, bằng chứng.
+model_version
+varchar(50)
+NOT NULL
+Phiên bản model/rule.
+generated_at
+timestamptz
+NOT NULL
+Thời điểm sinh.
+human_decision
+varchar(30)
+NULL
+shortlisted, ignored, invited; không để AI quyết định cuối.
+
+6.4 Bảng proposals
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Proposal.
+job_id
+uuid
+FK jobs
+Job.
+freelancer_id
+uuid
+FK freelancer_profiles
+Người ứng tuyển.
+cover_letter
+text
+NOT NULL
+Nội dung ứng tuyển.
+proposed_amount
+numeric(18,2)
+NOT NULL
+Giá đề xuất.
+estimated_days
+integer
+NULL
+Thời gian.
+status
+proposal_status
+DEFAULT submitted
+draft, submitted, shortlisted, rejected, withdrawn, accepted.
+submitted_at
+timestamptz
+NULL
+Thời điểm gửi.
+
+6.5 Bảng interviews
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Lịch phỏng vấn.
+proposal_id
+uuid
+FK proposals
+Proposal liên quan.
+scheduled_at
+timestamptz
+NOT NULL
+Lịch.
+duration_minutes
+smallint
+DEFAULT 30
+Thời lượng.
+meeting_url
+text
+NULL
+Link họp.
+status
+varchar(20)
+scheduled, completed, cancelled, no_show
+Trạng thái.
+notes
+text
+NULL
+Ghi chú nội bộ.
+
+6.6 Bảng ai_artifacts
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Kết quả AI có thể duyệt.
+user_id
+uuid
+FK users
+Người yêu cầu.
+organization_id
+uuid
+FK organizations NULL
+Ngữ cảnh doanh nghiệp.
+artifact_type
+varchar(30)
+NOT NULL
+jd, recruitment_content, parsed_cv, match_explanation.
+input_json
+jsonb
+NOT NULL
+Input đã chuẩn hóa/ẩn dữ liệu nhạy cảm phù hợp.
+output_json
+jsonb
+NOT NULL
+Output AI.
+status
+varchar(20)
+generated, accepted, edited, rejected
+Human review state.
+model_provider/version
+varchar(80)
+NOT NULL
+Truy vết.
+
+7. Data Dictionary — Contracts, Milestones, Finance & Disputes
+7.1 Bảng contracts
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Hợp đồng logic.
+job_id
+uuid
+FK jobs
+Job.
+proposal_id
+uuid
+UNIQUE FK proposals
+Proposal được chọn.
+organization_id
+uuid
+FK organizations
+Bên thuê.
+freelancer_id
+uuid
+FK freelancer_profiles
+Bên làm.
+status
+contract_status
+NOT NULL
+draft, pending_signatures, active, completed, terminated, disputed, cancelled.
+total_amount
+numeric(18,2)
+NOT NULL
+Tổng giá trị.
+currency
+char(3)
+DEFAULT VND
+Tiền tệ.
+terms_snapshot
+jsonb/text
+NOT NULL
+Điều khoản đã chốt; versioned.
+started_at/completed_at
+timestamptz
+NULL
+Mốc vòng đời.
+
+7.2 Bảng milestones
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Milestone.
+contract_id
+uuid
+FK contracts
+Hợp đồng.
+sequence_no
+smallint
+NOT NULL
+Thứ tự duy nhất trong hợp đồng.
+title
+varchar(200)
+NOT NULL
+Tên.
+description
+text
+NULL
+Tiêu chí nghiệm thu.
+amount
+numeric(18,2)
+NOT NULL
+Giá trị.
+due_at
+timestamptz
+NULL
+Hạn.
+status
+milestone_status
+NOT NULL
+draft, funded, in_progress, submitted, approved, revision_requested, paid, cancelled.
+approved_at/paid_at
+timestamptz
+NULL
+Mốc.
+
+7.3 Bảng deliverables
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Lần bàn giao.
+milestone_id
+uuid
+FK milestones
+Milestone.
+submitted_by
+uuid
+FK users
+Freelancer.
+version_no
+smallint
+NOT NULL
+Phiên bản.
+message
+text
+NULL
+Ghi chú.
+file_storage_keys
+jsonb
+NOT NULL
+Danh sách file.
+status
+varchar(20)
+submitted, approved, revision_requested
+Trạng thái review.
+reviewed_by/reviewed_at
+uuid/timestamptz
+NULL
+Người/thời điểm review.
+
+7.4 Bảng escrow_accounts
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Tài khoản ký quỹ logic.
+contract_id
+uuid
+UNIQUE FK contracts
+Một escrow/contract.
+currency
+char(3)
+DEFAULT VND
+Tiền tệ.
+held_amount
+numeric(18,2)
+DEFAULT 0
+Số đang giữ.
+released_amount
+numeric(18,2)
+DEFAULT 0
+Đã giải ngân.
+refunded_amount
+numeric(18,2)
+DEFAULT 0
+Đã hoàn.
+status
+varchar(20)
+unfunded, funded, partial, closed, frozen
+Trạng thái.
+provider_reference
+varchar(255)
+NULL
+Sandbox/payment provider.
+
+7.5 Bảng transactions
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Ledger entry.
+escrow_account_id
+uuid
+FK escrow_accounts NULL
+Escrow liên quan.
+payer_user_id/payee_user_id
+uuid
+FK users NULL
+Hai bên.
+type
+transaction_type
+NOT NULL
+deposit, release, refund, fee, withdrawal, reversal.
+amount
+numeric(18,2)
+>0
+Số tiền.
+currency
+char(3)
+NOT NULL
+Tiền tệ.
+status
+transaction_status
+NOT NULL
+pending, processing, succeeded, failed, reversed, refunded.
+idempotency_key
+varchar(120)
+UNIQUE
+Ngăn double charge.
+provider_reference
+varchar(255)
+NULL
+Reference ngoài.
+posted_at
+timestamptz
+NULL
+Khi đã ghi sổ.
+
+7.6 Bảng disputes
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Tranh chấp.
+contract_id
+uuid
+FK contracts
+Bắt buộc.
+milestone_id
+uuid
+FK milestones NULL
+Milestone cụ thể.
+opened_by
+uuid
+FK users
+Người mở.
+reason_code
+varchar(50)
+NOT NULL
+delivery, quality, payment, conduct, other.
+description
+text
+NOT NULL
+Nội dung.
+severity
+varchar(20)
+low, medium, high, critical
+Mức độ.
+status
+dispute_status
+NOT NULL
+open, evidence_collection, mediation, proposed_resolution, resolved, appealed, closed.
+assigned_to
+uuid
+FK users NULL
+Moderator.
+resolution_json
+jsonb
+NULL
+Quyết định/phan bổ.
+
+7.7 Bảng dispute_evidence
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Bằng chứng.
+dispute_id
+uuid
+FK disputes
+Tranh chấp.
+submitted_by
+uuid
+FK users
+Người gửi.
+evidence_type
+varchar(30)
+file, message_snapshot, timeline, other
+Loại.
+storage_key
+text
+NULL
+File.
+content_hash
+varchar(128)
+NULL
+Phát hiện thay đổi.
+description
+text
+NULL
+Mô tả.
+
+7.8 Bảng ratings
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Đánh giá.
+contract_id
+uuid
+FK contracts
+Chỉ sau hợp đồng phù hợp.
+reviewer_id/reviewee_id
+uuid
+FK users
+Hai phía.
+score
+smallint
+1..5
+Điểm.
+comment
+text
+NULL
+Nhận xét.
+is_public
+boolean
+DEFAULT true
+Hiển thị.
+moderation_status
+varchar(20)
+visible, hidden, pending
+Kiểm duyệt.
+UNIQUE
+(contract_id, reviewer_id, reviewee_id)
+Bắt buộc
+Một đánh giá/chiều.
+
+8. Data Dictionary — Communication, Admin, Audit & AI Quota
+8.1 Bảng conversations
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Kênh hội thoại.
+type
+varchar(30)
+NOT NULL
+direct, project, support, dispute.
+related_entity_type/id
+varchar/uuid
+NULL
+job, contract, dispute.
+status
+varchar(20)
+open, closed, archived
+Trạng thái.
+
+8.2 Bảng conversation_members
+Field
+Type
+Constraint
+Business meaning
+conversation_id
+uuid
+PK/FK conversations
+Khóa ghép.
+user_id
+uuid
+PK/FK users
+Khóa ghép.
+member_role
+varchar(20)
+participant, moderator, observer
+Vai trò.
+last_read_message_id
+uuid
+FK messages NULL
+Unread state.
+joined_at/left_at
+timestamptz
+Mốc
+Membership.
+
+8.3 Bảng messages
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Tin nhắn.
+conversation_id
+uuid
+FK conversations
+Kênh.
+sender_id
+uuid
+FK users
+Người gửi.
+body
+text
+NULL nếu chỉ file
+Nội dung.
+attachment_keys
+jsonb
+NULL
+File.
+message_type
+varchar(20)
+text, file, system
+Loại.
+sent_at
+timestamptz
+DEFAULT now()
+Thời gian.
+redacted_at/redacted_by
+timestamptz/uuid
+NULL
+Ẩn do vi phạm, vẫn audit.
+
+8.4 Bảng notifications
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Thông báo.
+user_id
+uuid
+FK users
+Người nhận.
+type
+varchar(50)
+NOT NULL
+job_approved, proposal_received, milestone_due...
+title/body
+varchar/text
+NOT NULL
+Nội dung.
+channel
+varchar(20)
+in_app, email, push
+Kênh.
+data_json
+jsonb
+NULL
+Deep link/context.
+read_at/sent_at
+timestamptz
+NULL
+Trạng thái.
+
+8.5 Bảng content_reports
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Báo cáo vi phạm.
+reporter_id
+uuid
+FK users
+Người báo.
+target_type
+varchar(30)
+NOT NULL
+user, job, message, portfolio, rating.
+target_id
+uuid
+NOT NULL
+Đối tượng.
+reason_code
+varchar(50)
+NOT NULL
+fraud, spam, harassment, copyright...
+description
+text
+NULL
+Mô tả.
+status
+varchar(20)
+open, in_review, actioned, dismissed
+Trạng thái.
+assigned_to
+uuid
+FK users NULL
+Moderator.
+
+8.6 Bảng audit_logs
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Log append-only.
+actor_type
+varchar(20)
+user, admin, service
+Actor.
+actor_user_id
+uuid
+FK users NULL
+Người thao tác.
+action
+varchar(100)
+NOT NULL
+job.approve, user.lock, transaction.refund...
+entity_type/entity_id
+varchar/uuid
+NOT NULL
+Đối tượng.
+before_json/after_json
+jsonb
+NULL
+Snapshot đã mask dữ liệu nhạy cảm.
+ip_address/user_agent
+inet/text
+NULL
+Bối cảnh.
+request_id
+uuid
+NULL
+Tracing.
+created_at
+timestamptz
+NOT NULL
+Không update/delete từ app.
+
+8.7 Bảng ai_quota_plans
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Gói quota.
+code
+varchar(50)
+UNIQUE
+free, freelancer_pro, business_pro.
+feature
+varchar(30)
+NOT NULL
+jd_generation, cv_parsing, matching, content.
+monthly_credits
+integer
+>=0
+Hạn mức.
+overage_policy
+varchar(20)
+block, pay_as_you_go, admin_approve
+Cơ chế vượt.
+
+8.8 Bảng ai_usage_logs
+Field
+Type
+Constraint
+Business meaning
+id
+uuid
+PK
+Mỗi lần gọi AI.
+user_id
+uuid
+FK users
+Người dùng.
+organization_id
+uuid
+FK organizations NULL
+Scope.
+feature
+varchar(30)
+NOT NULL
+Tính năng.
+request_id
+uuid
+UNIQUE
+Trace/idempotency.
+input_units/output_units
+integer
+>=0
+Token/page/call tùy provider.
+credits_used
+integer
+>=0
+Đơn vị quota nội bộ.
+estimated_cost
+numeric(18,6)
+>=0
+Chi phí biên ước tính.
+provider/model_version
+varchar(80)
+NOT NULL
+Truy vết.
+status
+varchar(20)
+succeeded, failed, blocked
+Kết quả.
+
+9. Enum và State Machine nghiệp vụ
+Entity
+Enum/State
+Chuyển trạng thái hợp lệ (rút gọn)
+users
+pending_verification → active → suspended/locked → active/deleted
+Verify email; Admin suspend/unlock; deleted là soft delete.
+verification_requests
+submitted → in_review → approved/rejected/expired
+Chỉ Admin/Moderator được review.
+jobs
+draft → pending_review → published → paused/closed; pending_review → rejected
+Doanh nghiệp không tự published nếu bật moderation.
+proposals
+draft → submitted → shortlisted/rejected/withdrawn → accepted
+accepted chỉ khi job còn mở và chưa có contract.
+contracts
+draft → pending_signatures → active → completed/terminated/disputed/cancelled
+disputed có thể quay active hoặc kết thúc tùy resolution.
+milestones
+draft → funded → in_progress → submitted → approved/revision_requested → paid
+Không paid nếu chưa approved và chưa có transaction succeeded.
+transactions
+pending → processing → succeeded/failed; succeeded → reversed/refunded
+Không sửa amount của transaction posted.
+disputes
+open → evidence_collection → mediation → proposed_resolution → resolved/appealed → closed
+Mọi chuyển trạng thái phải audit.
+content_reports
+open → in_review → actioned/dismissed
+Actioned có reference tới audit/admin action.
+
+9.1 Quy tắc bất biến (invariants)
+	•	Tổng amount của các milestone không vượt total_amount của contract; khi active phải bằng tổng hoặc có rule phần còn lại rõ ràng.
+	•	held_amount = tổng deposit succeeded − tổng release/refund/reversal posted; không được chỉnh thủ công từ Admin UI.
+	•	Milestone chỉ thuộc contract của chính nó; dispute.milestone_id nếu có phải cùng contract_id.
+	•	Một proposal accepted không được tạo nhiều contract; một job không được có nhiều contract active trừ khi nghiệp vụ cho phép tuyển nhiều người và có cấu trúc riêng.
+	•	Trust score và match score luôn lưu score_version, explanation và timestamp; AI chỉ gợi ý, quyết định cuối là human_decision.
+	•	Admin không tự thay đổi dữ liệu tài chính bằng UPDATE trực tiếp; mọi điều chỉnh tạo transaction/reversal và audit log.
+10. Ma trận Role — Permission
+Role
+Permissions chính
+Giới hạn
+Freelancer
+profile.self.update; job.read; proposal.create; contract.self.read; deliverable.submit; dispute.self.create
+Không truy cập /admin.
+Business Owner
+organization.manage; job.create/update; proposal.review; contract.create; milestone.approve; escrow.deposit
+Chỉ dữ liệu organization scope.
+Business Recruiter
+job.create/update; proposal.review; interview.manage
+Không quản lý billing/owner role.
+Support
+user.read_limited; conversation.support; ticket.manage
+Không xem secret/KYC full hoặc sửa tài chính.
+Moderator
+job.approve; content_report.review; user.restrict; dispute.mediate
+Hành động nhạy cảm phải ghi audit.
+Finance Admin
+escrow.read; transaction.review; refund.propose/execute theo rule
+Có maker-checker nếu triển khai tiền thật.
+AI Ops
+ai_usage.read; quota.manage; model_config.read
+Không xem CV raw nếu không cần.
+Super Admin
+Toàn quyền hệ thống
+Chỉ số lượng rất ít; bắt buộc MFA và session policy chặt.
+
+10.1 Quy tắc kiểm tra quyền
+	•	Frontend chỉ dùng permission để ẩn/hiện UI; Backend luôn kiểm tra lại role, permission và scope.
+	•	API Admin dùng prefix /api/v1/admin và yêu cầu permission cụ thể, không chỉ role=admin chung chung.
+	•	Organization-scoped permission phải kiểm tra user là member active của organization_id trong request/resource.
+	•	Dữ liệu tài chính, KYC, audit và PII trả về theo field-level authorization, không trả toàn bản ghi rồi ẩn bằng CSS.
+11. API Contract định hướng và bảng dữ liệu tác động
+Endpoint
+Actor
+Bảng đọc/ghi chính
+Ghi chú
+POST /auth/register
+Guest
+users, user_roles, freelancer_profiles hoặc organizations + organization_members, email_verification_tokens
+Tạo tài khoản atomic.
+POST /auth/login
+Guest
+users, auth_sessions, audit_logs
+Credential + lockout; trả access token.
+POST /auth/forgot-password
+Guest
+users, password_reset_tokens
+Luôn trả message trung tính.
+POST /auth/reset-password
+Guest token
+password_reset_tokens, users, auth_sessions, audit_logs
+Consume token; revoke sessions.
+GET /jobs
+Authenticated/Public
+jobs, organizations, job_skills, skills
+Chỉ published.
+POST /business/jobs
+Business
+jobs, job_skills, ai_artifacts
+Tạo draft/pending_review.
+PATCH /admin/jobs/{id}/approve
+Moderator
+jobs, notifications, audit_logs
+Không gọi từ Main Web.
+POST /jobs/{id}/proposals
+Freelancer
+proposals, notifications
+Unique theo rule.
+POST /contracts
+Business
+contracts, milestones, audit_logs
+Từ accepted proposal.
+POST /milestones/{id}/deliverables
+Freelancer
+deliverables, milestones, notifications
+submitted.
+POST /escrow/{contractId}/deposit
+Business
+transactions, escrow_accounts, audit_logs
+Sandbox/idempotent.
+POST /admin/disputes/{id}/resolve
+Moderator
+disputes, transactions (nếu có), notifications, audit_logs
+Atomic hoặc saga có trạng thái.
+GET /admin/ai-usage
+AI Ops
+ai_usage_logs, ai_quota_plans
+Aggregate, không lộ prompt nhạy cảm.
+
+12. Index, hiệu năng và đồng thời
+Bảng
+Index/Constraint đề xuất
+Lý do
+users
+UNIQUE lower(email); INDEX status; INDEX deleted_at WHERE NULL
+Login và Admin filter.
+auth_sessions
+UNIQUE refresh_token_hash; INDEX(user_id, revoked_at, expires_at)
+Session rotation/revoke.
+jobs
+INDEX(organization_id, status); INDEX(status, published_at DESC); full-text title/description
+List/filter/search.
+proposals
+UNIQUE(job_id, freelancer_id) tùy rule; INDEX(job_id, status)
+Review proposal.
+match_results
+UNIQUE(job_id, freelancer_id, model_version); INDEX(job_id, overall_score DESC)
+Top matching.
+milestones
+UNIQUE(contract_id, sequence_no); INDEX(contract_id, status)
+Workspace.
+transactions
+UNIQUE idempotency_key; INDEX(escrow_account_id, created_at DESC); INDEX(status)
+Ledger và reconciliation.
+messages
+INDEX(conversation_id, sent_at DESC); partition khi lớn
+Chat.
+audit_logs
+INDEX(entity_type, entity_id, created_at DESC); INDEX(actor_user_id, created_at DESC)
+Điều tra/audit.
+ai_usage_logs
+INDEX(user_id, feature, created_at); INDEX(organization_id, created_at)
+Quota/cost dashboard.
+
+12.1 Concurrency và idempotency
+	•	Dùng optimistic locking (version integer) cho job, contract, milestone và dispute khi nhiều người cùng thao tác.
+	•	Dùng idempotency_key cho deposit, release, refund, AI request tốn phí và email resend quan trọng.
+	•	Dùng row-level lock hoặc transaction isolation phù hợp khi cập nhật escrow balance và milestone payment.
+	•	Không tính số dư chỉ từ cột mutable nếu triển khai tiền thật; ledger transaction là nguồn kiểm toán, balance là projection có reconciliation.
+13. Bảo mật, dữ liệu nhạy cảm và lưu trữ
+Nhóm dữ liệu
+Ví dụ
+Yêu cầu
+Secret/Credential
+password_hash, token_hash, OAuth token
+Không log; mã hóa OAuth token; rotate key; quyền truy cập tối thiểu.
+PII
+email, phone, identity docs, CV
+Mask trong log; field-level permission; signed URL; retention có phê duyệt.
+Financial
+transaction, payout method, provider ref
+Không hiển thị toàn bộ số tài khoản; audit mọi thay đổi; sandbox trong MVP.
+AI input/output
+CV text, JD input, match explanation
+Gắn consent/purpose; tránh gửi dữ liệu không cần thiết; lưu provider/model/version và human review.
+Audit
+before/after snapshot, IP, actor
+Append-only; mask secrets; hạn chế export.
+
+13.1 Chính sách đề xuất cần Dev xác nhận
+Chính sách
+Đề xuất MVP
+Quyết định cần chốt
+Access token
+10-15 phút
+Tech Lead xác nhận.
+Refresh session
+7-30 ngày, rotation
+Product/Tech xác nhận remember-me.
+Email verification token
+24 giờ
+Cấu hình.
+Password reset token
+15-30 phút
+Cấu hình.
+Failed login lockout
+5 lần/15 phút hoặc risk-based
+Security review.
+Audit log retention
+Tối thiểu theo nhu cầu vận hành; chưa chốt pháp lý
+Product + Security + Compliance xác nhận.
+CV/KYC retention
+Theo purpose và quyền xóa; chưa chốt pháp lý
+Cần chính sách privacy chính thức.
+
+14. Liên kết hoạt động Main Web ↔ Admin Portal
+Hoạt động trên Main Web
+Dữ liệu phát sinh
+Admin Portal nhìn thấy/được làm
+Audit/Event
+Đăng ký user
+users, user_roles, profile/organization
+Tìm kiếm, xem trạng thái, khóa/mở khóa theo quyền
+user.registered; user.status_changed
+Gửi KYC
+verification_requests + file metadata
+Review tài liệu, approve/reject, ghi note
+verification.reviewed
+Tạo job
+jobs, job_skills, ai_artifacts
+Hàng chờ duyệt; approve/reject
+job.submitted; job.approved/rejected
+Gửi proposal
+proposals
+Support/Admin chỉ xem khi cần điều tra
+proposal.submitted
+Tạo hợp đồng/milestone
+contracts, milestones
+Theo dõi trạng thái, không sửa tùy tiện
+contract.created; milestone.status_changed
+Nạp/giải ngân
+transactions, escrow_accounts
+Giám sát, xử lý exception theo permission
+transaction.posted/reversed
+Mở tranh chấp
+disputes, evidence
+Assign moderator, xử lý, resolution
+dispute.opened/resolved
+Dùng AI
+ai_usage_logs, ai_artifacts
+Theo dõi quota, chi phí, lỗi
+ai.request.completed/blocked
+Báo cáo vi phạm
+content_reports
+Review, khóa, ẩn nội dung
+moderation.actioned
+
+15. Tiêu chí nghiệm thu thiết kế dữ liệu
+Nhóm kiểm tra
+Pass khi
+ERD
+Mọi FK, cardinality và bảng trung gian được xác định; không có entity mồ côi.
+Authentication
+Đăng ký/verify/login/reset là atomic hoặc idempotent; token hash; session revoke hoạt động.
+RBAC
+Backend từ chối 403 khi role/permission/scope không hợp lệ; không chỉ ẩn UI.
+Admin linkage
+Hành động Main Web xuất hiện đúng trên Admin Portal thông qua dữ liệu/API chung.
+Finance
+Không double charge; transaction có idempotency; reversal thay vì sửa lịch sử.
+AI
+Có quota, cost log, model version, explanation và human review state.
+Audit
+Các action nhạy cảm có actor, action, entity, timestamp, before/after đã mask.
+Security
+Không plaintext password/token; file dùng object storage; PII được giới hạn quyền.
+Performance
+Có index cho filter/list chính; không N+1 ở dashboard; query có pagination.
+Migration
+Migration chạy được trên DB mới; rollback/forward plan và seed roles/permissions.
+
+15.1 Bộ test dữ liệu tối thiểu
+	•	Unique email và OAuth account; đăng ký đồng thời không tạo user trùng.
+	•	User chưa verify không được login nếu policy yêu cầu.
+	•	Reset password consume token một lần và revoke session cũ.
+	•	Business user không đọc job/transaction của organization khác.
+	•	Freelancer không gọi được API /admin.
+	•	Approve job tạo audit + notification và job xuất hiện trong danh sách published.
+	•	Deposit/release cùng idempotency key chỉ tạo một transaction.
+	•	Dispute milestone khác contract bị từ chối.
+	•	AI request vượt quota bị block và vẫn ghi usage/error event phù hợp.
+16. Open Decisions cần Product và Dev chốt
+ID
+Quyết định
+Phương án đề xuất
+Owner
+OD-01
+Một business account có nhiều thành viên ngay MVP?
+Có schema organization_members; UI MVP có thể chỉ dùng owner.
+Product
+OD-02
+Job có cho tuyển nhiều freelancer?
+MVP mặc định 1 contract/job; nếu nhiều người, thêm job_slots hoặc bỏ unique.
+Product + Backend
+OD-03
+Thanh toán thực hay sandbox?
+MVP sandbox/mô phỏng có ledger; không claim escrow pháp lý thật.
+Product + Finance
+OD-04
+KYC provider nào?
+Mock/manual review trước; adapter interface cho provider sau.
+Tech Lead
+OD-05
+MFA cho Admin?
+Bắt buộc trước production; MVP ít nhất OTP/email hoặc TOTP nếu kịp.
+Security
+OD-06
+Search engine?
+PostgreSQL FTS MVP; OpenSearch khi quy mô lớn.
+Backend
+OD-07
+Event bus/outbox?
+Dùng transactional outbox cho notification/audit/payment event quan trọng.
+Backend
+OD-08
+Data retention/privacy policy?
+Soạn riêng trước pilot dữ liệu thật.
+Product + Legal/Compliance
+
+17. Trình tự triển khai đề xuất
+Sprint
+Phạm vi
+Deliverables
+Sprint 0
+Khóa model P0
+ERD vật lý; migration users/roles/permissions/sessions/tokens; seed RBAC; API error code.
+Sprint 1
+Authentication Nhóm 1
+Register/verify/login/forgot/reset/logout; frontend 9 màn hình; test integration.
+Sprint 2
+Profiles & organization
+Freelancer profile, organization owner/member, skills, portfolio, upload metadata.
+Sprint 3
+Jobs + moderation
+Job/JD, job skills, pending review; Admin approve/reject; notifications/audit.
+Sprint 4
+Proposal + matching
+Proposal, interview, match_result, AI usage/quota.
+Sprint 5
+Contract + milestone
+Contract, milestone, deliverable; workspace.
+Sprint 6
+Finance/dispute/admin
+Escrow sandbox, transactions, disputes, Trust & Safety dashboard.
+
+Bàn giao cho Dev Dev nên dùng tài liệu này làm đầu vào workshop 60-90 phút để chốt Open Decisions, sau đó tạo ERD vật lý, migration và API contract versioned. Không nên code backend chỉ dựa trên ảnh mockup.
+
+Phụ lục A. DDL khởi tạo tham chiếu cho P0 Authentication
+Đoạn dưới chỉ là starter để Dev thảo luận; cần điều chỉnh naming convention, extension, migration framework và security policy trước khi chạy production.
+CREATE TYPE user_status AS ENUM (   'pending_verification', 'active', 'suspended', 'locked', 'deleted' );  CREATE TABLE users (   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),   email varchar(255) NOT NULL,   password_hash varchar(255),   status user_status NOT NULL DEFAULT 'pending_verification',   email_verified_at timestamptz,   failed_login_count smallint NOT NULL DEFAULT 0,   locked_until timestamptz,   locale varchar(10) NOT NULL DEFAULT 'vi-VN',   timezone varchar(50) NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',   created_at timestamptz NOT NULL DEFAULT now(),   updated_at timestamptz NOT NULL DEFAULT now(),   deleted_at timestamptz ); CREATE UNIQUE INDEX ux_users_email_active   ON users (lower(email)) WHERE deleted_at IS NULL;  CREATE TABLE roles (   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),   code varchar(50) UNIQUE NOT NULL,   name varchar(100) NOT NULL,   is_system boolean NOT NULL DEFAULT true );  CREATE TABLE user_roles (   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,   role_id uuid NOT NULL REFERENCES roles(id) ON DELETE RESTRICT,   scope_type varchar(30),   scope_id uuid,   assigned_by uuid REFERENCES users(id),   assigned_at timestamptz NOT NULL DEFAULT now(),   PRIMARY KEY (user_id, role_id, scope_type, scope_id) );  CREATE TABLE auth_sessions (   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),   user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,   refresh_token_hash varchar(255) UNIQUE NOT NULL,   expires_at timestamptz NOT NULL,   revoked_at timestamptz,   last_used_at timestamptz,   ip_address inet,   user_agent text,   created_at timestamptz NOT NULL DEFAULT now() ); 
+Phụ lục B. Seed role tối thiểu
+Role code
+Mục đích
+Portal
+freelancer
+Người nhận việc
+Main Web
+business_owner
+Chủ tài khoản doanh nghiệp
+Main Web
+business_recruiter
+Nhân sự tuyển dụng trong organization
+Main Web
+support
+Hỗ trợ người dùng
+Admin Portal
+moderator
+Kiểm duyệt và xử lý tranh chấp
+Admin Portal
+finance_admin
+Giám sát giao dịch/ký quỹ
+Admin Portal
+ai_ops
+Giám sát quota và chi phí AI
+Admin Portal
+super_admin
+Toàn quyền nền tảng
+Admin Portal
+
+Phụ lục C. Checklist workshop với Dev
+	•	Xác nhận naming convention: snake_case, UUID, enum hay lookup table.
+	•	Xác nhận module ownership và migration repository.
+	•	Chốt Open Decisions OD-01 đến OD-08.
+	•	Vẽ ERD vật lý và sequence diagram cho register/login/job approval/payment/dispute.
+	•	Chốt API error codes và payload chuẩn.
+	•	Chốt permission seed và field-level access.
+	•	Chốt cách lưu file/object storage và signed URL.
+	•	Chốt AI quota unit, model version và cost logging.
+	•	Chạy threat model ngắn cho Authentication và Admin Portal.
+	•	Tạo backlog migration + service + integration test trước khi nối frontend.
+Xác nhận sử dụng tài liệu
+Vai trò
+Họ tên
+Ngày
+Xác nhận/Ghi chú
+Product Owner / BA
+
+
+
+Technical Lead
+
+
+
+Backend Lead
+
+
+
+Frontend Lead
+
+
+
+QA Lead
+
+
+
+

@@ -1,0 +1,29 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+import os
+
+# Khởi tạo đối tượng Base tập trung duy nhất cho toàn bộ hệ thống
+# Tất cả các SQLAlchemy Model (users, freelancers, organizations...) bắt buộc phải kế thừa từ Base này
+Base = declarative_base()
+
+# Chuỗi kết nối CSDL
+DB_URL = os.environ.get('DB_URL', "sqlite:///./freelancerhub.db")
+
+engine = create_engine(DB_URL, connect_args={"check_same_thread": False} if "sqlite" in DB_URL else {})
+
+LocalSession = sessionmaker(
+    autoflush=False,
+    bind=engine,
+    expire_on_commit=False
+)
+
+def get_db():
+    """
+    Dependency cung cấp Session làm việc với CSDL cho mỗi API Request
+    """
+    db = LocalSession()
+    try:
+        yield db
+    finally:
+        db.close()
