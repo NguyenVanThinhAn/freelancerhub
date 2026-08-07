@@ -2,6 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2, User, Briefcase, ShieldCheck, Zap } from "lucide-react";
 import { useAuth } from "@/auth/AuthContext";
 import { AuthLayout } from "@/components/AuthLayout";
+import {
+  ENDPOINT_REGISTER_FREELANCER,
+  ENDPOINT_REGISTER_BUSINESS,
+} from "@/api/endpoints";
+import type { BaseResponse } from "@/types/api";
 
 type AuthMode = "login" | "register-freelancer" | "register-business";
 
@@ -79,10 +84,34 @@ export default function Login() {
     try {
       if (mode === "login") {
         await login(email, password);
-      } else {
-        // TODO: wire register endpoints when backend is ready
-        setError("Tính năng đăng ký đang được phát triển. Vui lòng đăng nhập.");
+        return;
       }
+
+      // Register flow: gọi API tạo user, sau đó auto-login
+      const endpoint =
+        mode === "register-freelancer"
+          ? ENDPOINT_REGISTER_FREELANCER
+          : ENDPOINT_REGISTER_BUSINESS;
+
+      const payload =
+        mode === "register-freelancer"
+          ? { display_name: fullName, email, password }
+          : { company_name: fullName, email, password };
+
+      const res = await fetch(`/api/v1${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = (await res.json()) as BaseResponse<unknown>;
+
+      if (!res.ok || (json.status_code && json.status_code >= 400)) {
+        throw new Error(json.message ?? `Đăng ký thất bại (${res.status})`);
+      }
+
+      // Auto-login ngay sau khi tạo tài khoản thành công
+      await login(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi");
     } finally {
@@ -148,14 +177,14 @@ export default function Login() {
         {isRegister && (
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-foreground">
-              Họ và tên
+              {mode === "register-business" ? "Tên công ty" : "Họ và tên"}
             </label>
             <input
               type="text"
               required={isRegister}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="Nguyễn Văn A"
+              placeholder={mode === "register-business" ? "Công ty TNHH ABC" : "Nguyễn Văn A"}
               className="w-full rounded-xl border border-input bg-white px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
