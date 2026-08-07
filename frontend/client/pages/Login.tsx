@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, User, Briefcase, ShieldCheck, Zap } from "lucide-react";
 import { useAuth } from "@/auth/AuthContext";
 import { AuthLayout } from "@/components/AuthLayout";
@@ -66,6 +67,7 @@ const REGISTER_BUSINESS_BENEFITS = [
 
 export default function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -84,6 +86,7 @@ export default function Login() {
     try {
       if (mode === "login") {
         await login(email, password);
+        navigate("/", { replace: true });
         return;
       }
 
@@ -112,6 +115,7 @@ export default function Login() {
 
       // Auto-login ngay sau khi tạo tài khoản thành công
       await login(email, password);
+      navigate("/", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi");
     } finally {
