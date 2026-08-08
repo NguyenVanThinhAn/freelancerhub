@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   Check,
-  ChevronRight,
   FileText,
   Loader2,
   X,
@@ -94,9 +93,11 @@ const ACTION_LABEL: Record<string, string> = {
   REJECT: "Từ chối",
 };
 
-const REQUIRES_REASON_CODE: Record<string, boolean> = {
-  REJECT: true,
-  REQUEST_MORE_INFO: true,
+const ACTION_TONE: Record<string, string> = {
+  VERIFY: "bg-emerald-50 text-emerald-600",
+  PARTIALLY_VERIFY: "bg-sky-50 text-sky-600",
+  REQUEST_MORE_INFO: "bg-violet-50 text-violet-600",
+  REJECT: "bg-rose-50 text-rose-600",
 };
 
 function generateUuid(): string {
@@ -213,11 +214,8 @@ export default function AdminVerifications() {
 
   const requiresReasonCode = decisionMode === "reject" || decisionMode === "needs_info";
   const notesRequiredForOther = reasonCode === "OTHER";
-  const canSubmit =
-    !!reasonCode &&
-    (!notesRequiredForOther || notes.trim().length > 0) &&
-    (decisionMode !== "reject" || reasonCode.length > 0) &&
-    (decisionMode !== "needs_info" || reasonCode.length > 0);
+  // canSubmit: must have reason_code; if OTHER → notes required
+  const canSubmit = !!reasonCode && (!notesRequiredForOther || notes.trim().length > 0);
 
   return (
     <BusinessShell active="Admin">
@@ -437,7 +435,7 @@ export default function AdminVerifications() {
                       >
                         <div className="flex items-center justify-between">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[8px] font-bold ${STATUS_TONE[d.action] ?? "bg-slate-100 text-slate-500"}`}
+                            className={`rounded-full px-2 py-0.5 text-[8px] font-bold ${ACTION_TONE[d.action] ?? "bg-slate-100 text-slate-500"}`}
                           >
                             {ACTION_LABEL[d.action] ?? d.action}
                           </span>

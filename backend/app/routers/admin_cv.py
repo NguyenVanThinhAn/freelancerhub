@@ -273,6 +273,22 @@ async def make_admin_verification_decision(
             detail=f"Không tìm thấy Hồ sơ Xác minh với Case ID: {case_id}"
         )
 
+    # 1.5) State-machine guard (MASTER-DOC §L.2: VERIFIED/REJECTED là terminal).
+    # Cho phép transition: PENDING/IN_REVIEW/NEEDS_MORE_INFO/PARTIALLY_VERIFIED → mọi action.
+    # PARTIALLY_VERIFIED cũng được re-review để fix lỗi (sửa partial → verified).
+    TERMINAL_STATUSES = {
+        VerificationCaseStatusEnum.VERIFIED,
+        VerificationCaseStatusEnum.REJECTED,
+    }
+    if case.status in TERMINAL_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Case đã ở trạng thái terminal [{case.status.value}]. "
+                f"Không thể đưa ra quyết định mới."
+            ),
+        )
+
     admin_id = admin_user.id
 
     now = datetime.utcnow()
@@ -423,7 +439,8 @@ async def make_admin_verification_decision(
     db.commit()
 
     logger.info(
-        f"Admin ID={admin_id} đã đưa ra quyết định [{action.value}] reason_code={decision_req.reason_code} "
+        f"Admin ID={admin_id} đã đưa ra quyết định [{action.value}] "
+        f"reason_code={decision_req.reason_code.value if decision_req.reason_code else None} "
         f"cho Case ID={case.id}. Trạng thái mới: {new_case_status.value}"
     )
 
