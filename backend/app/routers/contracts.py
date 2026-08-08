@@ -135,10 +135,11 @@ def create_milestone(
     milestone = contract_service.create_milestone(
         db=db,
         contract_id=contract_id,
+        sequence_no=payload.sequence_no,
         title=payload.title,
         description=payload.description,
         amount=payload.amount,
-        due_date=payload.due_date
+        due_at=payload.due_at
     )
     return BaseResponse.create(
         status_code=status.HTTP_201_CREATED,
@@ -166,9 +167,9 @@ def submit_work(
     deliverable = contract_service.submit_deliverable(
         db=db,
         milestone_id=milestone_id,
-        freelancer_id=profile.user_id,
-        content=payload.content,
-        file_urls=payload.file_urls
+        submitted_by=current_user.id,
+        message=payload.message,
+        file_storage_keys=payload.file_storage_keys
     )
     return BaseResponse.create(
         status_code=status.HTTP_201_CREATED,

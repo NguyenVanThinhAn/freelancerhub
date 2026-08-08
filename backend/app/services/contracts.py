@@ -5,6 +5,7 @@ from app.models.contracts import Contract, ContractStatus, Milestone, MilestoneS
 from app.models.jobs import Job, JobStatus
 from app.models.proposals import Proposal, ProposalStatus
 from app.models.finance import Wallet, Transaction, TransactionType, TransactionStatus
+from app.models.organizations import Organization
 from app.core.logger import logger
 
 
@@ -27,24 +28,30 @@ def create_contract(
             organization_id=organization_id,
             proposal_id=proposal_id,
             total_amount=total_amount,
-            status=ContractStatus.ACTIVE
+            status=ContractStatus.active
         )
         db.add(contract)
         db.flush()
 
-        wallet = db.query(Wallet).filter(Wallet.user_id == organization_id).first()
-        if wallet and wallet.balance >= total_amount:
-            wallet.balance -= total_amount
-            wallet.locked_balance += total_amount
+        org = db.query(Organization).filter(Organization.id == organization_id).first()
+        if not org:
+            raise ValueError("Organization not found")
+            
+        wallet = db.query(Wallet).filter(Wallet.user_id == org.owner_user_id).with_for_update().first()
+        if not wallet or wallet.balance < total_amount:
+            raise ValueError("Insufficient balance to fund the contract escrow")
+        
+        wallet.balance -= total_amount
+        wallet.locked_balance += total_amount
 
-            tx = Transaction(
-                wallet_id=wallet.id,
-                amount=total_amount,
-                transaction_type=TransactionType.ESCROW_LOCK,
-                reference_id=contract.id,
-                status=TransactionStatus.COMPLETED
-            )
-            db.add(tx)
+        tx = Transaction(
+            wallet_id=wallet.id,
+            amount=total_amount,
+            transaction_type=TransactionType.ESCROW_LOCK,
+            reference_id=contract.id,
+            status=TransactionStatus.COMPLETED
+        )
+        db.add(tx)
 
         db.commit()
         db.refresh(contract)
@@ -70,19 +77,21 @@ def get_contracts_by_organization(db: Session, organization_id: str) -> List[Con
 def create_milestone(
     db: Session,
     contract_id: str,
+    sequence_no: int,
     title: str,
-    description: Optional[str],
     amount: float,
-    due_date: Optional[datetime] = None
+    description: Optional[str] = None,
+    due_at: Optional[datetime] = None
 ) -> Milestone:
     try:
         milestone = Milestone(
             contract_id=contract_id,
+            sequence_no=sequence_no,
             title=title,
             description=description,
             amount=amount,
-            due_date=due_date,
-            status=MilestoneStatus.PENDING
+            status=MilestoneStatus.draft,
+            due_at=due_at
         )
         db.add(milestone)
         db.commit()
@@ -97,21 +106,21 @@ def create_milestone(
 def submit_deliverable(
     db: Session,
     milestone_id: str,
-    freelancer_id: str,
-    content: str,
-    file_urls: Optional[List[str]] = None
+    submitted_by: str,
+    message: Optional[str] = None,
+    file_storage_keys: Optional[List[str]] = None
 ) -> Deliverable:
     try:
         milestone = db.query(Milestone).filter(Milestone.id == milestone_id).first()
         if milestone:
-            milestone.status = MilestoneStatus.SUBMITTED
+            milestone.status = MilestoneStatus.submitted
 
         deliverable = Deliverable(
             milestone_id=milestone_id,
-            freelancer_id=freelancer_id,
-            content=content,
-            file_urls=file_urls,
-            status=DeliverableStatus.PENDING_REVIEW
+            submitted_by=submitted_by,
+            message=message,
+            file_storage_keys=file_storage_keys or [],
+            status=DeliverableStatus.submitted
         )
         db.add(deliverable)
         db.commit()
@@ -129,16 +138,17 @@ def approve_deliverable(db: Session, deliverable_id: str) -> Optional[Deliverabl
         if not deliverable:
             return None
 
-        deliverable.status = DeliverableStatus.APPROVED
+        deliverable.status = DeliverableStatus.approved
 
         milestone = db.query(Milestone).filter(Milestone.id == deliverable.milestone_id).first()
         if milestone:
-            milestone.status = MilestoneStatus.PAID
+            milestone.status = MilestoneStatus.paid
 
             contract = db.query(Contract).filter(Contract.id == milestone.contract_id).first()
             if contract:
-                freelancer_wallet = db.query(Wallet).filter(Wallet.user_id == contract.freelancer_id).first()
-                org_wallet = db.query(Wallet).filter(Wallet.user_id == contract.organization_id).first()
+                org = db.query(Organization).filter(Organization.id == contract.organization_id).first()
+                freelancer_wallet = db.query(Wallet).filter(Wallet.user_id == contract.freelancer_id).with_for_update().first()
+                org_wallet = db.query(Wallet).filter(Wallet.user_id == org.owner_user_id).with_for_update().first()
 
                 if freelancer_wallet:
                     freelancer_wallet.balance += milestone.amount
@@ -177,11 +187,11 @@ def reject_deliverable(db: Session, deliverable_id: str, feedback: Optional[str]
         if not deliverable:
             return None
 
-        deliverable.status = DeliverableStatus.REJECTED
+        deliverable.status = DeliverableStatus.revision_requested
 
         milestone = db.query(Milestone).filter(Milestone.id == deliverable.milestone_id).first()
         if milestone:
-            milestone.status = MilestoneStatus.IN_PROGRESS
+            milestone.status = MilestoneStatus.in_progress
 
         db.commit()
         db.refresh(deliverable)
@@ -198,8 +208,8 @@ def complete_contract(db: Session, contract_id: str) -> Optional[Contract]:
         if not contract:
             return None
 
-        contract.status = ContractStatus.COMPLETED
-        contract.end_date = datetime.now(timezone.utc)
+        contract.status = ContractStatus.completed
+        contract.completed_at = datetime.now(timezone.utc)
 
         job = db.query(Job).filter(Job.id == contract.job_id).first()
         if job:

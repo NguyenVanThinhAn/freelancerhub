@@ -34,6 +34,13 @@ interface AdminUser {
   locked_until: string | null;
 }
 
+interface AdminUsersListResponse {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 const ROLE_TONE: Record<string, string> = {
   admin: "bg-rose-50 text-rose-600",
   enterprise: "bg-indigo-50 text-indigo-600",
@@ -60,16 +67,24 @@ export default function AdminUsers() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   const {
-    data: users,
+    data: usersResp,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["admin", "users"],
-    queryFn: () => apiGet<AdminUser[]>(ENDPOINT_ADMIN_USERS),
+    queryKey: ["admin", "users", page],
+    queryFn: () => apiGet<AdminUsersListResponse>(
+      ENDPOINT_ADMIN_USERS({ page, limit: PAGE_SIZE }),
+    ),
     staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
+  const users = usersResp?.items;
+  const totalUsers = usersResp?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
 
   const lockUser = useMutation({
     mutationFn: (userId: string) =>
@@ -283,6 +298,29 @@ export default function AdminUsers() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {usersResp && totalUsers > PAGE_SIZE && (
+          <div className="mt-3 flex items-center justify-between text-[10px]">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="rounded-md border border-slate-200 px-2 py-1 text-slate-500 hover:bg-slate-50 disabled:opacity-40"
+            >
+              ← Trước
+            </button>
+            <span className="text-slate-400">
+              Trang {page}/{totalPages} ({totalUsers} users)
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="rounded-md border border-slate-200 px-2 py-1 text-slate-500 hover:bg-slate-50 disabled:opacity-40"
+            >
+              Sau →
+            </button>
           </div>
         )}
       </section>

@@ -131,12 +131,24 @@ export default function AdminVerifications() {
   >("none");
   const [reasonCode, setReasonCode] = useState<ReasonCode | "">("");
   const [notes, setNotes] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("PENDING");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const { data: list, isLoading: listLoading } = useQuery({
-    queryKey: ["admin", "verifications"],
-    queryFn: () => apiGet<ListResponse>(ENDPOINT_ADMIN_VERIFICATIONS),
+    queryKey: ["admin", "verifications", statusFilter, page],
+    queryFn: () => apiGet<ListResponse>(
+      ENDPOINT_ADMIN_VERIFICATIONS({
+        status: statusFilter || undefined,
+        page,
+        limit: PAGE_SIZE,
+      }),
+    ),
     staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
+
+  const totalPages = list ? Math.max(1, Math.ceil(list.total / PAGE_SIZE)) : 1;
 
   const { data: detail, isLoading: detailLoading } = useQuery({
     queryKey: ["admin", "verifications", selectedCaseId],
@@ -175,19 +187,21 @@ export default function AdminVerifications() {
         { "Idempotency-Key": payload.idempotencyKey },
       ),
     onSuccess: () => {
+      // Use caseId captured in closure to invalidate the right query even if user
+      // switched to a different case while the mutation was in-flight.
+      const caseId = selectedCaseId;
       qc.invalidateQueries({ queryKey: ["admin", "verifications"] });
       qc.invalidateQueries({
-        queryKey: ["admin", "verifications", selectedCaseId],
+        queryKey: ["admin", "verifications", caseId],
       });
       qc.invalidateQueries({
-        queryKey: ["admin", "verifications", "audit", selectedCaseId],
+        queryKey: ["admin", "verifications", "audit", caseId],
       });
       toast.success("Đã gửi quyết định");
       setDecisionMode("none");
       setReasonCode("");
       setNotes("");
-    },
-    onError: (err: unknown) => {
+    },    onError: (err: unknown) => {
       const e = err as ApiError;
       if (e.status === 409) {
         toast.error("Quyết định trùng lặp (idempotency key đã dùng với payload khác).");
@@ -244,6 +258,22 @@ export default function AdminVerifications() {
               {list?.total ?? 0} cases
             </span>
           </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+              setSelectedCaseId(null);
+            }}
+            className="mb-3 h-8 w-full rounded-lg border border-slate-200 px-2 text-[10px] text-slate-600 outline-none focus:border-indigo-300"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="PENDING">Chờ duyệt</option>
+            <option value="VERIFIED">Đã duyệt</option>
+            <option value="PARTIALLY_VERIFIED">Duyệt một phần</option>
+            <option value="REJECTED">Từ chối</option>
+            <option value="NEEDS_MORE_INFO">Cần thêm thông tin</option>
+          </select>
           {listLoading ? (
             <div className="space-y-3">
               {[0, 1, 2].map((i) => (
@@ -286,6 +316,29 @@ export default function AdminVerifications() {
                   </div>
                 </button>
               ))}
+            </div>
+          )}
+          {list && list.total > PAGE_SIZE && (
+            <div className="mt-3 flex items-center justify-between text-[10px]">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="rounded-md border border-slate-200 px-2 py-1 text-slate-500 hover:bg-slate-50 disabled:opacity-40"
+              >
+                ← Trước
+              </button>
+              <span className="text-slate-400">
+                Trang {page}/{totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="rounded-md border border-slate-200 px-2 py-1 text-slate-500 hover:bg-slate-50 disabled:opacity-40"
+              >
+                Sau →
+              </button>
             </div>
           )}
         </section>

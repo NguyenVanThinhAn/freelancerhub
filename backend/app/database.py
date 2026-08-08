@@ -15,6 +15,16 @@ DB_URL = os.environ.get('DB_URL', f"sqlite:///{default_db_path}")
 
 engine = create_engine(DB_URL, connect_args={"check_same_thread": False} if "sqlite" in DB_URL else {})
 
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if "sqlite" in DB_URL:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
 LocalSession = sessionmaker(
     autoflush=False,
     bind=engine,

@@ -16,18 +16,15 @@ from .ai_usage_quotas import AIUsageQuota
 from .cv_documents import CVDocument, CVParseTask
 from .cv_results import CVParseResult, CVExtractedField, FieldEvidenceLevelEnum
 from .verifications import (
-    CVEvidence,
-    VerificationCase,
-    VerificationDecision,
+    CVEvidence, 
+    VerificationCase, 
+    VerificationDecision, 
     TrustPassportEntry,
     EvidenceTypeEnum,
     EvidenceStatusEnum,
     VerificationCaseStatusEnum,
-    VerificationDecisionActionEnum,
-    VerificationReasonCodeEnum,
-    REASON_CODE_BY_ACTION,
+    VerificationDecisionActionEnum
 )
-from .audit_log import AuditLog, AuditActionEnum
 
 from .categories import Category
 from .jobs import Job, JobSkill, JobPaymentType, JobStatus
@@ -36,3 +33,10 @@ from .contracts import Contract, Milestone, Deliverable, ContractStatus, Milesto
 from .finance import Wallet, Transaction, TransactionType, TransactionStatus
 from .disputes import Dispute, DisputeEvidence, DisputeStatus
 from .shortlists import Shortlist
+from .admin import Role, Permission, RolePermission, UserRole, ContentReport, AuditLog, ContentReportStatus
+from .ai import MatchResult, AIArtifact, AIQuotaPlan, AIUsageLog
+
+# Update missing from existing imports
+from .users import OAuthAccount
+from .contracts import Rating
+from .finance import EscrowAccount

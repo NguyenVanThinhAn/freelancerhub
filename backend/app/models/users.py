@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Enum, text
+from sqlalchemy import Column, String, Integer, DateTime, Enum, text, ForeignKey
 from sqlalchemy.orm import relationship
 import enum
 import uuid
@@ -108,3 +108,17 @@ class User(Base):
     # Quan hệ với hạn mức AI của người dùng
     ai_usage_quotas = relationship(
         'AIUsageQuota', back_populates='user', cascade='all, delete-orphan')
+
+    # Quan hệ với OAuthAccounts
+    oauth_accounts = relationship(
+        'OAuthAccount', back_populates='user', cascade='all, delete-orphan')
+
+class OAuthAccount(Base):
+    __tablename__ = 'oauth_accounts'
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    provider = Column(String(50), nullable=False)
+    provider_user_id = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'), nullable=False)
+    
+    user = relationship('User', back_populates='oauth_accounts')

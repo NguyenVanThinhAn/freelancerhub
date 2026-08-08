@@ -68,7 +68,8 @@ def accept_proposal(db: Session, proposal_id: str) -> Optional[Proposal]:
             job.status = JobStatus.IN_PROGRESS
 
         db.query(Proposal).filter(
-            Proposal.job_id == proposal.job_id
+            Proposal.job_id == proposal.job_id,
+            Proposal.id != proposal_id
         ).update({Proposal.status: ProposalStatus.REJECTED})
 
         proposal.status = ProposalStatus.ACCEPTED

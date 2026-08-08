@@ -51,3 +51,12 @@ class Transaction(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     wallet = relationship('Wallet', backref='transactions')
+
+class EscrowAccount(Base):
+    __tablename__ = 'escrow_accounts'
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    contract_id = Column(String(36), ForeignKey('contracts.id', ondelete='CASCADE'), nullable=False)
+    wallet_id = Column(String(36), ForeignKey('wallets.id', ondelete='CASCADE'), nullable=False)
+    amount = Column(Float, nullable=False, default=0.0)
+    status = Column(String(50), nullable=False, default='LOCKED')
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)

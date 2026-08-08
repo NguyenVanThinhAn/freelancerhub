@@ -72,11 +72,28 @@ export const ENDPOINT_SHORTLISTS = "/shortlists";
 export const ENDPOINT_SHORTLISTS_ID = (id: string) => `/shortlists/${id}`;
 
 // ─── Admin / System ─────────────────────────────────────────────────────────
-export const ENDPOINT_ADMIN_USERS = "/admin/users";
+export const ENDPOINT_ADMIN_USERS = (
+  params: { page?: number; limit?: number } = {},
+) => {
+  const qs = new URLSearchParams();
+  if (params.page) qs.set("page", String(params.page));
+  if (params.limit) qs.set("limit", String(params.limit));
+  const s = qs.toString();
+  return s ? `/admin/users?${s}` : `/admin/users`;
+};
 export const ENDPOINT_ADMIN_USERS_ID = (id: string) => `/admin/users/${id}`;
 export const ENDPOINT_ADMIN_USERS_ID_LOCK = (id: string) => `/admin/users/${id}/lock`;
 export const ENDPOINT_ADMIN_USERS_UNLOCK = (id: string) => `/admin/users/${id}/unlock`;
-export const ENDPOINT_ADMIN_VERIFICATIONS = "/admin/verifications";
+export const ENDPOINT_ADMIN_VERIFICATIONS = (
+  params: { status?: string; page?: number; limit?: number } = {},
+) => {
+  const qs = new URLSearchParams();
+  if (params.status) qs.set("status_filter", params.status);
+  if (params.page) qs.set("page", String(params.page));
+  if (params.limit) qs.set("limit", String(params.limit));
+  const s = qs.toString();
+  return s ? `/admin/verifications?${s}` : `/admin/verifications`;
+};
 export const ENDPOINT_ADMIN_VERIFICATIONS_ID = (id: string) => `/admin/verifications/${id}`;
 export const ENDPOINT_ADMIN_VERIFICATIONS_ID_DECISION = (id: string) =>
   `/admin/verifications/${id}/decision`;

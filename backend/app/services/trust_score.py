@@ -4,6 +4,7 @@ Tính toán Trust Score (0-100) từ danh sách TrustPassportEntry đã verified
 Theo MASTER-DOC Phần M.5: "Trust score must be explainable and derived from versioned rules."
 """
 from datetime import datetime, timezone
+from typing import List
 
 
 # Versioned scoring weights — thay đổi theo product policy cần bump version

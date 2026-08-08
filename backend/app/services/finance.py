@@ -35,7 +35,7 @@ def deposit(db: Session, wallet_id: str, amount: float) -> Transaction:
         if amount <= 0:
             raise ValueError("Amount must be positive")
 
-        wallet = db.query(Wallet).filter(Wallet.id == wallet_id).first()
+        wallet = db.query(Wallet).filter(Wallet.id == wallet_id).with_for_update().first()
         if not wallet:
             raise ValueError("Wallet not found")
 
@@ -62,7 +62,7 @@ def withdraw(db: Session, wallet_id: str, amount: float) -> Transaction:
         if amount <= 0:
             raise ValueError("Amount must be positive")
 
-        wallet = db.query(Wallet).filter(Wallet.id == wallet_id).first()
+        wallet = db.query(Wallet).filter(Wallet.id == wallet_id).with_for_update().first()
         if not wallet:
             raise ValueError("Wallet not found")
 

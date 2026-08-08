@@ -130,6 +130,7 @@ def process_cv_parsing_pipeline(task_id: str, db_session_factory):
         logger.info(f"[Task {task_id}] Hoàn thành toàn bộ AI Parsing Pipeline cho Document {doc.id}!")
 
     except Exception as e:
+        db.rollback()
         logger.error(f"[Task {task_id}] Lỗi trong tiến trình AI Parsing Pipeline: {str(e)}")
         if task:
             task.status = TaskStatusEnum.FAILED

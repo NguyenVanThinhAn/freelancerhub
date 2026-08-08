@@ -20,6 +20,8 @@ def create_job(
     skill_ids: Optional[List[str]] = None
 ) -> Job:
     try:
+        if budget_min is not None and budget_max is not None and budget_min > budget_max:
+            raise ValueError("budget_min cannot be greater than budget_max")
         job = Job(
             organization_id=organization_id,
             title=title,
@@ -105,6 +107,12 @@ def update_job(
         if not job:
             return None
 
+        # Validate budget
+        new_min = kwargs.get('budget_min', job.budget_min)
+        new_max = kwargs.get('budget_max', job.budget_max)
+        if new_min is not None and new_max is not None and new_min > new_max:
+            raise ValueError("budget_min cannot be greater than budget_max")
+
         allowed_fields = ['title', 'description', 'category_id', 'budget_min',
                          'budget_max', 'payment_type', 'status']
         for field in allowed_fields:
@@ -131,7 +139,7 @@ def delete_job(db: Session, job_id: str) -> bool:
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             return False
-        db.delete(job)
+        job.status = JobStatus.CANCELLED
         db.commit()
         return True
     except Exception as e:

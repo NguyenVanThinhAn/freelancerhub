@@ -3,75 +3,73 @@ from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 
-
 class ContractStatusEnum(str, Enum):
-    ACTIVE = 'ACTIVE'
-    COMPLETED = 'COMPLETED'
-    DISPUTED = 'DISPUTED'
-    CANCELLED = 'CANCELLED'
-
+    draft = 'draft'
+    pending_signatures = 'pending_signatures'
+    active = 'active'
+    completed = 'completed'
+    terminated = 'terminated'
+    disputed = 'disputed'
+    cancelled = 'cancelled'
 
 class MilestoneStatusEnum(str, Enum):
-    PENDING = 'PENDING'
-    IN_PROGRESS = 'IN_PROGRESS'
-    SUBMITTED = 'SUBMITTED'
-    APPROVED = 'APPROVED'
-    PAID = 'PAID'
-
+    draft = 'draft'
+    funded = 'funded'
+    in_progress = 'in_progress'
+    submitted = 'submitted'
+    approved = 'approved'
+    revision_requested = 'revision_requested'
+    paid = 'paid'
+    cancelled = 'cancelled'
 
 class DeliverableStatusEnum(str, Enum):
-    PENDING_REVIEW = 'PENDING_REVIEW'
-    APPROVED = 'APPROVED'
-    REJECTED = 'REJECTED'
-
+    submitted = 'submitted'
+    approved = 'approved'
+    revision_requested = 'revision_requested'
 
 class MilestoneBase(BaseModel):
     title: str
     description: Optional[str] = None
     amount: float
-    due_date: Optional[datetime] = None
-
+    due_at: Optional[datetime] = None
 
 class MilestoneCreate(MilestoneBase):
-    pass
-
+    sequence_no: int
 
 class MilestoneOut(BaseModel):
     id: str
     contract_id: str
+    sequence_no: int
     title: str
     description: Optional[str]
     amount: float
     status: MilestoneStatusEnum
-    due_date: Optional[datetime]
+    due_at: Optional[datetime]
+    approved_at: Optional[datetime]
+    paid_at: Optional[datetime]
     created_at: datetime
 
     class Config:
         from_attributes = True
 
-
 class WorkSubmissionCreate(BaseModel):
-    content: str
-    file_urls: Optional[List[str]] = None
-
+    message: Optional[str] = None
+    file_storage_keys: Optional[List[str]] = []
 
 class WorkSubmissionOut(BaseModel):
     id: str
     milestone_id: str
-    freelancer_id: str
-    content: str
-    file_urls: Optional[List[str]]
+    submitted_by: str
+    message: Optional[str]
+    file_storage_keys: Optional[List[str]]
     status: DeliverableStatusEnum
     submitted_at: datetime
 
     class Config:
         from_attributes = True
 
-
 class MilestoneReviewDecision(BaseModel):
-    decision: str  # 'approve' or 'reject'
     feedback: Optional[str] = None
-
 
 class ContractOut(BaseModel):
     id: str
@@ -81,14 +79,13 @@ class ContractOut(BaseModel):
     proposal_id: Optional[str]
     total_amount: float
     status: ContractStatusEnum
-    start_date: datetime
-    end_date: Optional[datetime]
+    started_at: Optional[datetime]
+    completed_at: Optional[datetime]
     created_at: datetime
     milestones: List[MilestoneOut] = []
 
     class Config:
         from_attributes = True
-
 
 class ContractListOut(BaseModel):
     id: str
@@ -97,7 +94,7 @@ class ContractListOut(BaseModel):
     organization_id: str
     total_amount: float
     status: ContractStatusEnum
-    start_date: datetime
+    started_at: Optional[datetime]
     created_at: datetime
 
     class Config:

@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request, status, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
 from app.database import get_db
 from app.schemas.default import BaseResponse
 from app.core.dependencies import get_current_user
@@ -12,12 +11,6 @@ from app.models.users import User
 from app.services.notifications import send_notification
 
 router = APIRouter()
-
-
-class CreateThreadRequest(BaseModel):
-    # Accept cả UUID (cũ) lẫn email (mới). Ít nhất 1 trong 2 phải có.
-    participant_id: str | None = None
-    participant_email: str | None = None
 
 
 @router.get('/notifications')
@@ -49,60 +42,14 @@ def mark_notification_read(request: Request, notification_id: str, current_user:
 
 
 @router.post('/chat/threads')
-def create_chat_thread(request: Request, payload: CreateThreadRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    participant_user = None
-
-    if payload.participant_email:
-        email = payload.participant_email.strip().lower()
-        participant_user = db.query(User).filter(User.email == email).first()
-        if not participant_user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Không tìm thấy người dùng với email "{email}"')
-    elif payload.participant_id:
-        participant_user = db.query(User).filter(User.id == payload.participant_id).first()
-        if not participant_user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Người dùng không tồn tại')
-    else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Cần cung cấp participant_id hoặc participant_email')
-
-    if participant_user.id == current_user.id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Không thể tạo luồng chat với chính mình')
-
-    # Check existing thread between current_user and participant_user.
-    # We need: WHERE thread has participant SELF AND participant OTHER.
-    # Use correlated subqueries (avoid alias ambiguity in SQL).
-    existing_thread = (
-        db.query(ChatThread)
-        .filter(
-            ChatThread.id.in_(
-                db.query(ThreadParticipant.thread_id).filter(ThreadParticipant.user_id == current_user.id)
-            ),
-            ChatThread.id.in_(
-                db.query(ThreadParticipant.thread_id).filter(ThreadParticipant.user_id == participant_user.id)
-            ),
-        )
-        .first()
-    )
-
-    if existing_thread:
-        return BaseResponse.create(
-            status_code=status.HTTP_200_OK,
-            message='Luồng chat đã tồn tại',
-            data={'thread_id': existing_thread.id},
-            error=None,
-            timestamp=None,
-            path=request.url.path
-        )
-
+def create_chat_thread(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     thread = ChatThread()
     db.add(thread)
-    db.flush()
-
-    participant_self = ThreadParticipant(thread_id=thread.id, user_id=current_user.id)
-    participant_other = ThreadParticipant(thread_id=thread.id, user_id=participant_user.id)
-    db.add(participant_self)
-    db.add(participant_other)
     db.commit()
-
+    participant = ThreadParticipant(
+        thread_id=thread.id, user_id=current_user.id)
+    db.add(participant)
+    db.commit()
     return BaseResponse.create(status_code=status.HTTP_201_CREATED, message='Tạo luồng chat thành công', data={'thread_id': thread.id}, error=None, timestamp=None, path=request.url.path)
 
 
@@ -110,15 +57,8 @@ def create_chat_thread(request: Request, payload: CreateThreadRequest, current_u
 def list_chat_messages(request: Request, thread_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     thread = db.query(ChatThread).filter(ChatThread.id == thread_id).first()
     if not thread:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Không tìm thấy luồng chat')
-
-    is_participant = db.query(ThreadParticipant).filter(
-        ThreadParticipant.thread_id == thread_id,
-        ThreadParticipant.user_id == current_user.id
-    ).first()
-    if not is_participant:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Bạn không có quyền xem tin nhắn trong luồng chat này')
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail='Không tìm thấy luồng chat')
     messages = db.query(ChatMessage).filter(
         ChatMessage.thread_id == thread_id).order_by(ChatMessage.created_at.asc()).all()
     return BaseResponse.create(status_code=status.HTTP_200_OK, message='Lấy danh sách tin nhắn thành công', data=[{
@@ -133,69 +73,16 @@ def list_chat_messages(request: Request, thread_id: str, current_user: User = De
 def send_chat_message(request: Request, thread_id: str, content: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     thread = db.query(ChatThread).filter(ChatThread.id == thread_id).first()
     if not thread:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Không tìm thấy luồng chat')
-
-    is_participant = db.query(ThreadParticipant).filter(
-        ThreadParticipant.thread_id == thread_id,
-        ThreadParticipant.user_id == current_user.id
-    ).first()
-    if not is_participant:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Bạn không có quyền gửi tin nhắn trong luồng chat này')
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail='Không tìm thấy luồng chat')
     message_text = content.get('content_text')
     if not message_text:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Nội dung tin nhắn không được để trống')
-
-    message = ChatMessage(thread_id=thread_id, sender_id=current_user.id, content_text=message_text)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail='Nội dung tin nhắn không được để trống')
+    message = ChatMessage(thread_id=thread_id,
+                          sender_id=current_user.id, content_text=message_text)
     db.add(message)
     db.commit()
-
-    participants = db.query(ThreadParticipant).filter(
-        ThreadParticipant.thread_id == thread_id,
-        ThreadParticipant.user_id != current_user.id
-    ).all()
-
-    for p in participants:
-        send_notification(db, p.user_id, 'MESSAGE_RECEIVED', 'Bạn có tin nhắn mới', 'Bạn có tin nhắn mới trong cuộc trò chuyện')
-
+    send_notification(db, current_user.id, 'MESSAGE_RECEIVED',
+                      'Bạn có tin nhắn mới', 'Bạn có tin nhắn mới trong cuộc trò chuyện')
     return BaseResponse.create(status_code=status.HTTP_201_CREATED, message='Gửi tin nhắn thành công', data={'message_id': message.id}, error=None, timestamp=None, path=request.url.path)
-
-
-@router.get('/chat/threads')
-def list_chat_threads(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    threads = db.query(ChatThread).join(ThreadParticipant).filter(
-        ThreadParticipant.user_id == current_user.id
-    ).all()
-
-    data = []
-    for thread in threads:
-        participants = db.query(ThreadParticipant, User).join(User).filter(
-            ThreadParticipant.thread_id == thread.id
-        ).all()
-
-        last_message = db.query(ChatMessage).filter(
-            ChatMessage.thread_id == thread.id
-        ).order_by(ChatMessage.created_at.desc()).first()
-
-        data.append({
-            'id': thread.id,
-            'created_at': thread.created_at.isoformat(),
-            'participants': [{
-                'user_id': p.User.id,
-                'display_name': p.User.email
-            } for p in participants],
-            'last_message': {
-                'id': last_message.id,
-                'content_text': last_message.content_text,
-                'created_at': last_message.created_at.isoformat()
-            } if last_message else None
-        })
-
-    return BaseResponse.create(
-        status_code=status.HTTP_200_OK,
-        message='Lấy danh sách luồng chat thành công',
-        data=data,
-        error=None,
-        timestamp=None,
-        path=request.url.path
-    )

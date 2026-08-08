@@ -115,8 +115,8 @@ def resolve_dispute(
 
 
 def _release_to_freelancer(db: Session, contract: Contract, milestone: Milestone):
-    freelancer_wallet = db.query(Wallet).filter(Wallet.user_id == contract.freelancer_id).first()
-    org_wallet = db.query(Wallet).filter(Wallet.user_id == contract.organization_id).first()
+    freelancer_wallet = db.query(Wallet).filter(Wallet.user_id == contract.freelancer_id).with_for_update().first()
+    org_wallet = db.query(Wallet).filter(Wallet.user_id == contract.organization_id).with_for_update().first()
 
     if freelancer_wallet:
         freelancer_wallet.balance += milestone.amount
@@ -140,7 +140,7 @@ def _release_to_freelancer(db: Session, contract: Contract, milestone: Milestone
 
 
 def _refund_to_client(db: Session, contract: Contract, milestone: Milestone):
-    org_wallet = db.query(Wallet).filter(Wallet.user_id == contract.organization_id).first()
+    org_wallet = db.query(Wallet).filter(Wallet.user_id == contract.organization_id).with_for_update().first()
     if org_wallet:
         org_wallet.balance += milestone.amount
         org_wallet.locked_balance -= milestone.amount
@@ -157,8 +157,8 @@ def _split_payment(db: Session, contract: Contract, milestone: Milestone, freela
     freelancer_amount = milestone.amount * (freelancer_pct / 100)
     client_amount = milestone.amount - freelancer_amount
 
-    freelancer_wallet = db.query(Wallet).filter(Wallet.user_id == contract.freelancer_id).first()
-    org_wallet = db.query(Wallet).filter(Wallet.user_id == contract.organization_id).first()
+    freelancer_wallet = db.query(Wallet).filter(Wallet.user_id == contract.freelancer_id).with_for_update().first()
+    org_wallet = db.query(Wallet).filter(Wallet.user_id == contract.organization_id).with_for_update().first()
 
     if freelancer_wallet:
         freelancer_wallet.balance += freelancer_amount

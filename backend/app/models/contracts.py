@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, Float, Enum, ForeignKey, JSON, Integer
+from sqlalchemy import Column, String, Text, DateTime, Float, Enum, ForeignKey, JSON, Integer, Boolean
 from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime, timezone
@@ -95,3 +95,14 @@ class Deliverable(Base):
     milestone = relationship('Milestone', backref='deliverables')
     submitter = relationship('User', foreign_keys=[submitted_by])
     reviewer = relationship('User', foreign_keys=[reviewed_by])
+
+class Rating(Base):
+    __tablename__ = 'ratings'
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    contract_id = Column(String(36), ForeignKey('contracts.id', ondelete='CASCADE'), nullable=False)
+    reviewer_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    reviewee_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    score = Column(Float, nullable=False)
+    comment = Column(Text, nullable=True)
+    is_public = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
