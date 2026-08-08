@@ -50,13 +50,7 @@ class ContentReport(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
-class AuditLog(Base):
-    __tablename__ = 'audit_logs'
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String(36), ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
-    action = Column(String(100), nullable=False)
-    entity_type = Column(String(50), nullable=False)
-    entity_id = Column(String(36), nullable=False)
-    details_json = Column(Text, nullable=True)
-    ip_address = Column(String(45), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+# NOTE: AuditLog đã được định nghĩa trong audit_log.py (schema mới với actor_id,
+# prior_state, new_state). KHÔNG define lại ở đây — sẽ gây đụng độ metadata.
+
