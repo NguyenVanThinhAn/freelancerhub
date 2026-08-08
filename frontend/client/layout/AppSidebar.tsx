@@ -27,25 +27,25 @@ export interface NavItem {
 
 const navItems: NavItem[] = [
   // ────── Common (cả 3 role) ──────
-  { label: "Tổng quan", icon: LayoutDashboard, route: "/", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
-  { label: "Tin nhắn", icon: Activity, route: "/messages", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
-  { label: "Tranh chấp", icon: ShieldCheck, route: "/disputes", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
-  { label: "Cài đặt", icon: Settings, route: "/settings", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
-  { label: "Tìm việc", icon: Search, route: "/jobs/browse", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
+  { label: "Tổng quan", icon: LayoutDashboard, route: "/", allowedRoles: ["freelancer", "business", "enterprise"] },
+  { label: "Tin nhắn", icon: Activity, route: "/messages", allowedRoles: ["freelancer", "business", "enterprise"] },
+  { label: "Tranh chấp", icon: ShieldCheck, route: "/disputes", allowedRoles: ["freelancer", "business", "enterprise"] },
+  { label: "Cài đặt", icon: Settings, route: "/settings", allowedRoles: ["freelancer", "business", "enterprise"] },
+  { label: "Tìm việc", icon: Search, route: "/jobs/browse", allowedRoles: ["freelancer", "business", "enterprise"] },
 
-  // ────── Business + Admin ──────
-  { label: "Tạo JD", icon: FileText, route: "/create-job", allowedRoles: ["business", "enterprise", "admin"] },
-  { label: "AI Matching", icon: UsersRound, route: "/matching", allowedRoles: ["business", "enterprise", "admin"] },
-  { label: "Explainable AI", icon: Sparkles, route: "/explainable-matching", allowedRoles: ["business", "enterprise", "admin"] },
-  { label: "Tin tuyển dụng", icon: BriefcaseBusiness, route: "/jobs", allowedRoles: ["business", "enterprise", "admin"] },
-  { label: "Phỏng vấn", icon: CalendarDays, route: "/interview-scheduler", allowedRoles: ["business", "enterprise", "admin"] },
-  { label: "Hợp đồng", icon: FileText, route: "/contract-milestone", allowedRoles: ["business", "enterprise", "admin"] },
-  { label: "Thanh toán", icon: WalletCards, route: "/wallet", allowedRoles: ["business", "enterprise", "admin"] },
+  // ────── Business + Enterprise ──────
+  { label: "Tạo JD", icon: FileText, route: "/create-job", allowedRoles: ["business", "enterprise"] },
+  { label: "AI Matching", icon: UsersRound, route: "/matching", allowedRoles: ["business", "enterprise"] },
+  { label: "Explainable AI", icon: Sparkles, route: "/explainable-matching", allowedRoles: ["business", "enterprise"] },
+  { label: "Tin tuyển dụng", icon: BriefcaseBusiness, route: "/jobs", allowedRoles: ["business", "enterprise"] },
+  { label: "Phỏng vấn", icon: CalendarDays, route: "/interview-scheduler", allowedRoles: ["business", "enterprise"] },
+  { label: "Hợp đồng", icon: FileText, route: "/contract-milestone", allowedRoles: ["business", "enterprise"] },
+  { label: "Thanh toán", icon: WalletCards, route: "/wallet", allowedRoles: ["business", "enterprise"] },
 
-  // ────── Freelancer + Admin ──────
-  { label: "Workspace", icon: FileText, route: "/project-workspace", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
-  { label: "Upload CV", icon: FileText, route: "/freelancer/upload", allowedRoles: ["freelancer", "admin"] },
-  { label: "Hộ chiếu uy tín", icon: Sparkles, route: "/freelancer/trust-passport", allowedRoles: ["freelancer", "admin"] },
+  // ────── Freelancer ──────
+  { label: "Workspace", icon: FileText, route: "/project-workspace", allowedRoles: ["freelancer", "business", "enterprise"] },
+  { label: "Upload CV", icon: FileText, route: "/freelancer/upload", allowedRoles: ["freelancer"] },
+  { label: "Hộ chiếu uy tín", icon: Sparkles, route: "/freelancer/trust-passport", allowedRoles: ["freelancer"] },
 
   // ────── Admin-only ──────
   { label: "Quản lý Users", icon: UsersRound, route: "/admin/users", allowedRoles: ["admin"] },
