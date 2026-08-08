@@ -5,7 +5,8 @@ from app.models.verifications import (
     EvidenceTypeEnum,
     EvidenceStatusEnum,
     VerificationCaseStatusEnum,
-    VerificationDecisionActionEnum
+    VerificationDecisionActionEnum,
+    VerificationReasonCodeEnum,
 )
 
 # ==============================================================================
@@ -112,8 +113,26 @@ class VerificationCaseDetailResponse(BaseModel):
 
 class VerificationDecisionRequest(BaseModel):
     action: VerificationDecisionActionEnum = Field(..., description="Hành động: VERIFY, PARTIALLY_VERIFY, REQUEST_MORE_INFO, REJECT")
-    reason: Optional[str] = Field(None, description="Lý do hoặc ghi chú của Admin")
-    verifiedFieldPaths: Optional[List[str]] = Field(default_factory=list, description="Danh sách các field_path được duyệt nếu chọn PARTIALLY_VERIFY hoặc VERIFY")
+    reason_code: Optional[VerificationReasonCodeEnum] = Field(
+        None,
+        description=(
+            "Mã lý do có cấu trúc (theo MASTER-DOC §M.6). "
+            "BẮT BUỘC khi action=REJECT hoặc REQUEST_MORE_INFO. "
+            "Optional cho VERIFY/PARTIALLY_VERIFY."
+        ),
+    )
+    reason: Optional[str] = Field(
+        None,
+        max_length=2000,
+        description=(
+            "Ghi chú free-text. Optional cho mọi action, "
+            "BẮT BUỘC khi reason_code=OTHER."
+        ),
+    )
+    verifiedFieldPaths: Optional[List[str]] = Field(
+        default_factory=list,
+        description="Danh sách các field_path được duyệt nếu chọn PARTIALLY_VERIFY hoặc VERIFY",
+    )
 
 
 class VerificationDecisionResponse(BaseModel):
@@ -121,8 +140,28 @@ class VerificationDecisionResponse(BaseModel):
     documentId: str
     action: VerificationDecisionActionEnum
     newStatus: VerificationCaseStatusEnum
+    reasonCode: Optional[VerificationReasonCodeEnum] = None
     reviewedAt: datetime
     message: str
+
+
+class AuditLogEntry(BaseModel):
+    """Một entry trong audit history của 1 case."""
+    id: str
+    actorId: str
+    actorEmail: str
+    action: str
+    priorState: dict = Field(default_factory=dict)
+    newState: dict = Field(default_factory=dict)
+    reasonCode: Optional[str] = None
+    notes: Optional[str] = None
+    createdAt: datetime
+
+
+class AuditHistoryResponse(BaseModel):
+    caseId: str
+    decisions: List[AuditLogEntry]
+    totalDecisions: int
 
 
 class ResubmitVerificationResponse(BaseModel):

@@ -80,7 +80,47 @@ export const ENDPOINT_ADMIN_VERIFICATIONS = "/admin/verifications";
 export const ENDPOINT_ADMIN_VERIFICATIONS_ID = (id: string) => `/admin/verifications/${id}`;
 export const ENDPOINT_ADMIN_VERIFICATIONS_ID_DECISION = (id: string) =>
   `/admin/verifications/${id}/decision`;
+export const ENDPOINT_ADMIN_VERIFICATIONS_ID_AUDIT = (id: string) =>
+  `/admin/verifications/${id}/audit`;
 export const ENDPOINT_QUOTAS_ME = "/quotas/me";
+
+// ─── Admin: Reason Code Catalog (mirror VerificationReasonCodeEnum backend) ──
+// Theo MASTER-DOC §M.6: REJECT/REQUEST_MORE_INFO yêu cầu reason code có cấu trúc.
+// Action family: VERIFY | PARTIALLY_VERIFY | REQUEST_MORE_INFO | REJECT | "*" (generic OTHER)
+export const REASON_CODES = {
+  // VERIFY family
+  EVIDENCE_SUFFICIENT:              { label: "Bằng chứng đầy đủ",                action: "VERIFY" },
+  EDUCATION_VERIFIED:               { label: "Bằng cấp đã xác minh",             action: "VERIFY" },
+  EXPERIENCE_VERIFIED:              { label: "Kinh nghiệm đã xác minh",          action: "VERIFY" },
+  SKILL_VERIFIED:                   { label: "Kỹ năng đã xác minh",              action: "VERIFY" },
+  // PARTIALLY_VERIFY family
+  PARTIAL_FIELDS_VERIFIED:          { label: "Các trường chọn đã xác minh",      action: "PARTIALLY_VERIFY" },
+  EVIDENCE_SUFFICIENT_FOR_FIELDS:   { label: "Bằng chứng đủ cho trường chọn",    action: "PARTIALLY_VERIFY" },
+  // REQUEST_MORE_INFO family
+  MISSING_DEGREE:                   { label: "Thiếu bằng cấp",                   action: "REQUEST_MORE_INFO" },
+  MISSING_CERTIFICATE:              { label: "Thiếu chứng chỉ",                  action: "REQUEST_MORE_INFO" },
+  MISSING_PORTFOLIO:                { label: "Thiếu portfolio",                  action: "REQUEST_MORE_INFO" },
+  INSUFFICIENT_EVIDENCE:            { label: "Bằng chứng chưa đủ",              action: "REQUEST_MORE_INFO" },
+  TIMELINE_UNCLEAR:                 { label: "Timeline chưa rõ ràng",            action: "REQUEST_MORE_INFO" },
+  // REJECT family
+  DEGREE_NOT_VERIFIED:              { label: "Bằng cấp không xác minh được",     action: "REJECT" },
+  CERTIFICATE_FAKE:                 { label: "Chứng chỉ giả mạo",                action: "REJECT" },
+  EXPERIENCE_FABRICATED:            { label: "Kinh nghiệm bịa đặt",              action: "REJECT" },
+  IDENTITY_MISMATCH:                { label: "Danh tính không khớp",             action: "REJECT" },
+  DUPLICATE_PROFILE:                { label: "Hồ sơ trùng lặp",                  action: "REJECT" },
+  POLICY_VIOLATION:                 { label: "Vi phạm chính sách",               action: "REJECT" },
+  // Generic
+  OTHER:                            { label: "Lý do khác (ghi rõ trong ghi chú)", action: "*" },
+} as const;
+
+export type ReasonCode = keyof typeof REASON_CODES;
+
+// Helper: filter reason codes theo action family
+export function reasonCodesFor(action: string): ReasonCode[] {
+  return (Object.keys(REASON_CODES) as ReasonCode[]).filter(
+    (k) => REASON_CODES[k].action === action || REASON_CODES[k].action === "*",
+  );
+}
 
 // ─── CV Intelligence ─────────────────────────────────────────────────────────
 export const ENDPOINT_CV_UPLOAD = "/cv/upload";

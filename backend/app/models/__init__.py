@@ -16,15 +16,18 @@ from .ai_usage_quotas import AIUsageQuota
 from .cv_documents import CVDocument, CVParseTask
 from .cv_results import CVParseResult, CVExtractedField, FieldEvidenceLevelEnum
 from .verifications import (
-    CVEvidence, 
-    VerificationCase, 
-    VerificationDecision, 
+    CVEvidence,
+    VerificationCase,
+    VerificationDecision,
     TrustPassportEntry,
     EvidenceTypeEnum,
     EvidenceStatusEnum,
     VerificationCaseStatusEnum,
-    VerificationDecisionActionEnum
+    VerificationDecisionActionEnum,
+    VerificationReasonCodeEnum,
+    REASON_CODE_BY_ACTION,
 )
+from .audit_log import AuditLog, AuditActionEnum
 
 from .categories import Category
 from .jobs import Job, JobSkill, JobPaymentType, JobStatus

@@ -1,5 +1,7 @@
 from __future__ import annotations
 import uuid
+import json as _json
+import hashlib
 from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
@@ -16,8 +18,11 @@ from app.models.verifications import (
     TrustPassportEntry,
     EvidenceStatusEnum,
     VerificationCaseStatusEnum,
-    VerificationDecisionActionEnum
+    VerificationDecisionActionEnum,
+    VerificationReasonCodeEnum,
+    REASON_CODE_BY_ACTION,
 )
+from app.models.audit_log import AuditLog
 from app.schemas.verification import (
     CVEvidenceResponse,
     VerificationCaseSummaryItem,
@@ -25,12 +30,15 @@ from app.schemas.verification import (
     Verification3ColumnDetail,
     VerificationCaseDetailResponse,
     VerificationDecisionRequest,
-    VerificationDecisionResponse
+    VerificationDecisionResponse,
+    AuditLogEntry,
+    AuditHistoryResponse,
 )
 from app.schemas.default import BaseResponse
 from app.core.logger import logger
 from app.core.dependencies import require_role
 from app.core.config_trust import get_badge_name
+from app.core.idempotency import get as idem_get, put as idem_put
 from app.models.notifications import Notification, NotificationType
 import json
 
@@ -235,7 +243,29 @@ async def make_admin_verification_decision(
     """
     API Dành cho Admin: Đưa ra phán quyết Phê duyệt / Từ chối Hồ sơ Xác minh.
     - Phê duyệt (VERIFY / PARTIALLY_VERIFY): Tự động nâng cấp `evidence_level` thành `PLATFORM_VERIFIED` và ghi nhận Huy hiệu xanh vào `trust_passport_entries`.
+
+    Theo MASTER-DOC §M.6:
+    - REJECT/REQUEST_MORE_INFO yêu cầu `reason_code` (free-text notes không đủ).
+    - reason_code=OTHER yêu cầu notes không rỗng.
+    - Endpoint hỗ trợ Idempotency-Key header (24h TTL, in-memory cache).
+    - Mỗi action ghi 1 audit_log (admin_id, prior_state, new_state, reason_code, notes, timestamp).
     """
+    # 1) Idempotency check (theo MASTER-DOC §M.6: "decision endpoint must be idempotent")
+    idem_key = request.headers.get("Idempotency-Key")
+    raw_body = await request.body()
+    body_hash = hashlib.sha256(raw_body).hexdigest()
+    if idem_key:
+        cached = idem_get(idem_key)
+        if cached:
+            if cached["payload_hash"] != body_hash:
+                # Same key but different payload → reject the replay
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Idempotency-Key đã được dùng với payload khác. Vui lòng tạo key mới.",
+                )
+            # Same key + same payload → return cached response without re-execution
+            return cached["response"]
+
     case = db.query(VerificationCase).filter(VerificationCase.id == case_id).first()
     if not case:
         raise HTTPException(
@@ -247,6 +277,39 @@ async def make_admin_verification_decision(
 
     now = datetime.utcnow()
     action = decision_req.action
+
+    # 2) Validate reason_code theo action family (MASTER-DOC §M.6)
+    if action in (VerificationDecisionActionEnum.REJECT, VerificationDecisionActionEnum.REQUEST_MORE_INFO):
+        if decision_req.reason_code is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"reason_code là BẮT BUỘC khi action={action.value}. "
+                    f"Chọn 1 trong các code: "
+                    f"{sorted(c.value for c in REASON_CODE_BY_ACTION[action])}"
+                ),
+            )
+        allowed_codes = REASON_CODE_BY_ACTION[action]
+        if decision_req.reason_code not in allowed_codes:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"reason_code='{decision_req.reason_code.value}' không hợp lệ cho action={action.value}. "
+                    f"Chỉ chấp nhận: {sorted(c.value for c in allowed_codes)}"
+                ),
+            )
+
+    # 3) Khi reason_code=OTHER mà notes rỗng → yêu cầu ghi chú chi tiết
+    if decision_req.reason_code == VerificationReasonCodeEnum.OTHER:
+        notes_text = (decision_req.reason or "").strip()
+        if not notes_text:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Khi reason_code=OTHER, trường 'reason' (notes) là BẮT BUỘC để ghi rõ lý do.",
+            )
+
+    # 4) Snapshot prior_state TRƯỚC khi mutate (audit log cần)
+    prior_state = {"status": case.status.value}
 
     # Map trạng thái tương ứng
     status_map = {
@@ -283,8 +346,10 @@ async def make_admin_verification_decision(
         verification_case_id=case.id,
         admin_id=admin_id,
         action=action,
+        reason_code=decision_req.reason_code,
         reason=decision_req.reason,
-        verified_field_paths=decision_req.verifiedFieldPaths
+        verified_field_paths=decision_req.verifiedFieldPaths,
+        idempotency_key=idem_key,
     )
     db.add(decision_rec)
 
@@ -293,7 +358,7 @@ async def make_admin_verification_decision(
         parse_result = db.query(CVParseResult).filter(CVParseResult.cv_document_id == case.cv_document_id).first()
         if parse_result:
             fields_query = db.query(CVExtractedField).filter(CVExtractedField.cv_parse_result_id == parse_result.id)
-            
+
             if action == VerificationDecisionActionEnum.PARTIALLY_VERIFY and decision_req.verifiedFieldPaths:
                 approved_paths = decision_req.verifiedFieldPaths
             else: # VERIFY toàn bộ
@@ -334,23 +399,124 @@ async def make_admin_verification_decision(
     # Tạo thông báo cho Freelancer về quyết định của Admin (theo CV-06 screen)
     _send_verification_notification(db, case, action, decision_req.reason, admin_id)
 
+    # 5) Audit log (MASTER-DOC §M.6: "Every action records admin ID, timestamp, prior state and new state")
+    audit = AuditLog(
+        id=str(uuid.uuid4()),
+        entity_type="verification_case",
+        entity_id=case.id,
+        actor_id=admin_id,
+        actor_role="admin",
+        action=action.value,
+        prior_state=prior_state,
+        new_state={
+            "status": new_case_status.value,
+            "verified_field_paths": decision_req.verifiedFieldPaths or None,
+        },
+        reason_code=decision_req.reason_code.value if decision_req.reason_code else None,
+        notes=decision_req.reason,
+        idempotency_key=idem_key,
+        ip_address=request.client.host if request.client else None,
+        user_agent=(request.headers.get("user-agent") or "")[:255],
+    )
+    db.add(audit)
+
     db.commit()
 
-    logger.info(f"Admin ID={admin_id} đã đưa ra quyết định [{action.value}] cho Case ID={case.id}. Trạng thái mới: {new_case_status.value}")
+    logger.info(
+        f"Admin ID={admin_id} đã đưa ra quyết định [{action.value}] reason_code={decision_req.reason_code} "
+        f"cho Case ID={case.id}. Trạng thái mới: {new_case_status.value}"
+    )
 
     decision_res = VerificationDecisionResponse(
         caseId=case.id,
         documentId=case.cv_document_id,
         action=action,
         newStatus=new_case_status,
+        reasonCode=decision_req.reason_code,
         reviewedAt=now,
         message=f"Đã cập nhật quyết định xác minh [{action.value}] thành công."
     )
 
-    return BaseResponse.create(
+    response = BaseResponse.create(
         status_code=status.HTTP_200_OK,
         message="Gửi quyết định xác minh thành công.",
         data=decision_res,
         error=None,
         path=request.url.path
+    )
+
+    # 6) Cache response by Idempotency-Key (24h TTL)
+    if idem_key:
+        # BaseResponse.create() returns dict; ensure datetimes JSON-safe
+        response_dict = response if isinstance(response, dict) else _json.loads(_json.dumps(response, default=str))
+        if isinstance(response_dict.get("data"), dict) and "reviewedAt" in response_dict["data"]:
+            reviewed_at = response_dict["data"]["reviewedAt"]
+            if hasattr(reviewed_at, "isoformat"):
+                response_dict["data"]["reviewedAt"] = reviewed_at.isoformat()
+        idem_put(idem_key, body_hash, response_dict, status.HTTP_200_OK)
+
+    return response
+
+
+@router.get("/admin/verifications/{case_id}/audit", status_code=status.HTTP_200_OK)
+async def get_audit_history(
+    request: Request,
+    case_id: str,
+    admin_user: User = Depends(require_role('admin')),
+    db: Session = Depends(get_db)
+):
+    """
+    API Dành cho Admin: Lấy lịch sử audit của 1 verification case.
+    Trả về các entry audit_log (admin_id, action, prior_state, new_state, reason_code, notes, timestamp)
+    theo thứ tự thời gian (cũ → mới).
+    """
+    case = db.query(VerificationCase).filter(VerificationCase.id == case_id).first()
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Không tìm thấy Hồ sơ Xác minh với Case ID: {case_id}",
+        )
+
+    logs = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.entity_type == "verification_case",
+            AuditLog.entity_id == case_id,
+        )
+        .order_by(AuditLog.created_at.asc())
+        .all()
+    )
+
+    # Cache user lookup để tránh N+1
+    actor_ids = {log.actor_id for log in logs}
+    actors_by_id = {}
+    if actor_ids:
+        for u in db.query(User).filter(User.id.in_(actor_ids)).all():
+            actors_by_id[u.id] = u.email
+
+    items = [
+        AuditLogEntry(
+            id=log.id,
+            actorId=log.actor_id,
+            actorEmail=actors_by_id.get(log.actor_id, "system"),
+            action=log.action,
+            priorState=log.prior_state or {},
+            newState=log.new_state or {},
+            reasonCode=log.reason_code,
+            notes=log.notes,
+            createdAt=log.created_at,
+        )
+        for log in logs
+    ]
+
+    return BaseResponse.create(
+        status_code=status.HTTP_200_OK,
+        message="Lấy lịch sử audit thành công.",
+        data=AuditHistoryResponse(
+            caseId=case_id,
+            decisions=items,
+            totalDecisions=len(items),
+        ),
+        error=None,
+        path=request.url.path,
     )

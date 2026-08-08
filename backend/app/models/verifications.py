@@ -51,6 +51,75 @@ class VerificationDecisionActionEnum(str, enum.Enum):
     REJECT = "REJECT"                      # Từ chối bác bỏ
 
 
+class VerificationReasonCodeEnum(str, enum.Enum):
+    """
+    Mã lý do có cấu trúc (reason code) theo MASTER-DOC §M.6.
+    Admin PHẢI chọn 1 code khi REJECT/REQUEST_MORE_INFO; free-text notes không thay thế.
+    Mỗi code map với 1 action family để validate ở decision endpoint.
+    """
+    # ── VERIFY family (tuỳ chọn, dùng để thống kê) ──
+    EVIDENCE_SUFFICIENT = "EVIDENCE_SUFFICIENT"
+    EDUCATION_VERIFIED = "EDUCATION_VERIFIED"
+    EXPERIENCE_VERIFIED = "EXPERIENCE_VERIFIED"
+    SKILL_VERIFIED = "SKILL_VERIFIED"
+    # ── PARTIALLY_VERIFY family ──
+    PARTIAL_FIELDS_VERIFIED = "PARTIAL_FIELDS_VERIFIED"
+    EVIDENCE_SUFFICIENT_FOR_FIELDS = "EVIDENCE_SUFFICIENT_FOR_FIELDS"
+    # ── REQUEST_MORE_INFO family (BẮT BUỘC) ──
+    MISSING_DEGREE = "MISSING_DEGREE"
+    MISSING_CERTIFICATE = "MISSING_CERTIFICATE"
+    MISSING_PORTFOLIO = "MISSING_PORTFOLIO"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    TIMELINE_UNCLEAR = "TIMELINE_UNCLEAR"
+    # ── REJECT family (BẮT BUỘC) ──
+    DEGREE_NOT_VERIFIED = "DEGREE_NOT_VERIFIED"
+    CERTIFICATE_FAKE = "CERTIFICATE_FAKE"
+    EXPERIENCE_FABRICATED = "EXPERIENCE_FABRICATED"
+    IDENTITY_MISMATCH = "IDENTITY_MISMATCH"
+    DUPLICATE_PROFILE = "DUPLICATE_PROFILE"
+    POLICY_VIOLATION = "POLICY_VIOLATION"
+    # ── Generic ──
+    OTHER = "OTHER"
+
+
+# Map action → tập reason code hợp lệ. Dùng ở admin_cv decision endpoint để validate.
+# Theo MASTER-DOC §M.6:
+#   - REJECT    phải có reason code (free-text notes không đủ).
+#   - REQUEST_MORE_INFO phải có reason code.
+#   - VERIFY / PARTIALLY_VERIFY reason code là optional nhưng vẫn cho phép ghi nhận.
+REASON_CODE_BY_ACTION: dict = {
+    VerificationDecisionActionEnum.VERIFY: frozenset({
+        VerificationReasonCodeEnum.EVIDENCE_SUFFICIENT,
+        VerificationReasonCodeEnum.EDUCATION_VERIFIED,
+        VerificationReasonCodeEnum.EXPERIENCE_VERIFIED,
+        VerificationReasonCodeEnum.SKILL_VERIFIED,
+        VerificationReasonCodeEnum.OTHER,
+    }),
+    VerificationDecisionActionEnum.PARTIALLY_VERIFY: frozenset({
+        VerificationReasonCodeEnum.PARTIAL_FIELDS_VERIFIED,
+        VerificationReasonCodeEnum.EVIDENCE_SUFFICIENT_FOR_FIELDS,
+        VerificationReasonCodeEnum.OTHER,
+    }),
+    VerificationDecisionActionEnum.REQUEST_MORE_INFO: frozenset({
+        VerificationReasonCodeEnum.MISSING_DEGREE,
+        VerificationReasonCodeEnum.MISSING_CERTIFICATE,
+        VerificationReasonCodeEnum.MISSING_PORTFOLIO,
+        VerificationReasonCodeEnum.INSUFFICIENT_EVIDENCE,
+        VerificationReasonCodeEnum.TIMELINE_UNCLEAR,
+        VerificationReasonCodeEnum.OTHER,
+    }),
+    VerificationDecisionActionEnum.REJECT: frozenset({
+        VerificationReasonCodeEnum.DEGREE_NOT_VERIFIED,
+        VerificationReasonCodeEnum.CERTIFICATE_FAKE,
+        VerificationReasonCodeEnum.EXPERIENCE_FABRICATED,
+        VerificationReasonCodeEnum.IDENTITY_MISMATCH,
+        VerificationReasonCodeEnum.DUPLICATE_PROFILE,
+        VerificationReasonCodeEnum.POLICY_VIOLATION,
+        VerificationReasonCodeEnum.OTHER,
+    }),
+}
+
+
 # ==============================================================================
 # SQLALCHEMY MODELS
 # ==============================================================================
@@ -116,11 +185,13 @@ class VerificationDecision(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     verification_case_id = Column(String(36), ForeignKey("verification_cases.id"), nullable=False)
     admin_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    
+
     action = Column(Enum(VerificationDecisionActionEnum), nullable=False)
+    reason_code = Column(Enum(VerificationReasonCodeEnum), nullable=True)
     reason = Column(Text, nullable=True)
     verified_field_paths = Column(JSON, nullable=True)  # Mảng các field_path được duyệt PLATFORM_VERIFIED
-    
+
+    idempotency_key = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships

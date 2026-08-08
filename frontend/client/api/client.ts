@@ -107,8 +107,18 @@ export const apiGet = <T>(path: string, auth = true) =>
 export const apiPost = <T>(path: string, body: unknown, auth = true) =>
   apiFetch<T>(path, { method: "POST", body: JSON.stringify(body), auth });
 
-export const apiPatch = <T>(path: string, body: unknown, auth = true) =>
-  apiFetch<T>(path, { method: "PATCH", body: JSON.stringify(body), auth });
+export const apiPatch = <T>(
+  path: string,
+  body: unknown,
+  auth = true,
+  extraHeaders?: Record<string, string>,
+) =>
+  apiFetch<T>(path, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+    auth,
+    headers: extraHeaders,
+  });
 
 export const apiDelete = <T>(path: string, auth = true) =>
   apiFetch<T>(path, { method: "DELETE", auth });
