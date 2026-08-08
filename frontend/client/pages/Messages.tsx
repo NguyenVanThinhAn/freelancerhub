@@ -5,6 +5,7 @@ import { apiGet, apiPost } from "@/api/client";
 import { ENDPOINT_CHAT_THREADS, ENDPOINT_CHAT_THREADS_ID_MESSAGES } from "@/api/endpoints";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/auth/AuthContext";
 import { toast } from "sonner";
 import type { ApiError } from "@/types/api";
 
@@ -38,6 +39,7 @@ function formatRelative(iso: string): string {
 
 export default function Messages() {
   const qc = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [showNewThread, setShowNewThread] = useState(false);
@@ -187,16 +189,38 @@ export default function Messages() {
                     Chưa có tin nhắn. Hãy gửi tin nhắn đầu tiên!
                   </div>
                 ) : (
-                  messages.map((m) => (
-                    <div key={m.id} className="flex">
-                      <div className="max-w-[70%] rounded-2xl bg-slate-100 px-3 py-2 text-[11px]">
-                        <p className="whitespace-pre-line">{m.content_text}</p>
-                        <p className="mt-1 text-right text-[8px] text-slate-400">
-                          {new Date(m.created_at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
+                  messages.map((m) => {
+                    const isMine = currentUser?.id === m.sender_id;
+                    const senderName = selectedThread?.participants.find(
+                      (p) => p.user_id === m.sender_id
+                    )?.display_name;
+                    return (
+                      <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                        <div
+                          className={`max-w-[70%] rounded-2xl px-3 py-2 text-[11px] ${
+                            isMine
+                              ? "rounded-br-sm bg-indigo-600 text-white"
+                              : "rounded-bl-sm bg-slate-100 text-slate-800"
+                          }`}
+                        >
+                          {!isMine && senderName && (
+                            <p className="mb-0.5 text-[9px] font-bold text-slate-500">{senderName}</p>
+                          )}
+                          <p className="whitespace-pre-line">{m.content_text}</p>
+                          <p
+                            className={`mt-1 text-right text-[8px] ${
+                              isMine ? "text-indigo-100" : "text-slate-400"
+                            }`}
+                          >
+                            {new Date(m.created_at).toLocaleTimeString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
                 <div ref={messagesEndRef} />
               </div>

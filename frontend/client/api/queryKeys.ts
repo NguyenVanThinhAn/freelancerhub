@@ -28,6 +28,9 @@ export const QK_NOTIFICATIONS = "notifications";
 
 // ─── Profile ────────────────────────────────────────────────────────────────
 export const QK_FREELANCER_PROFILE = "freelancer:profile";
+export const QK_FREELANCER_SKILLS = "freelancer:skills";
+export const QK_FREELANCER_PORTFOLIO = "freelancer:portfolio";
+export const QK_FREELANCER_CV_IMPORT = "freelancer:cv-import";
 export const QK_ORGANIZATION_PROFILE = "organization:profile";
 export const QK_QUOTAS = "quotas";
 

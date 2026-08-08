@@ -17,6 +17,7 @@ export const ENDPOINT_REGISTER_BUSINESS = "/register/business";
 export const ENDPOINT_FREELANCER_PROFILE = "/freelancer/profile";
 export const ENDPOINT_FREELANCER_SKILLS = "/freelancer/skills";
 export const ENDPOINT_FREELANCER_PORTFOLIO = "/freelancer/portfolio";
+export const ENDPOINT_FREELANCER_CV_IMPORT = "/freelancer/cv-import";
 export const ENDPOINT_ORGANIZATION_PROFILE = "/organization/profile";
 export const ENDPOINT_ORGANIZATION_LOGO = "/organization/logo";
 export const ENDPOINT_USERS_AVATAR = "/users/avatar";

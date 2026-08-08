@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import { CVUploadPage } from "./pages/CVUpload";
 import { TrustPassportPage } from "./pages/TrustPassport";
+import { FreelancerProfilePage } from "./pages/FreelancerProfile";
 import { EvidencePage } from "./pages/Evidence";
 import AdminUsers from "./pages/AdminUsers";
 import AdminVerifications from "./pages/AdminVerifications";
@@ -195,6 +196,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["freelancer"]}>
                   <TrustPassportPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/freelancer/profile"
+              element={
+                <ProtectedRoute allowedRoles={["freelancer"]}>
+                  <FreelancerProfilePage />
                 </ProtectedRoute>
               }
             />

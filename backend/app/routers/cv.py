@@ -31,6 +31,7 @@ from app.models.verifications import (
     EvidenceStatusEnum,
     VerificationCaseStatusEnum
 )
+from app.models.notifications import NotificationType
 from app.schemas.cv import (
     CVUploadResponse, 
     CVParseTaskResponse,
@@ -49,6 +50,7 @@ from app.schemas.verification import (
 from app.schemas.default import BaseResponse
 from app.services.cv_service import simulate_background_parsing
 from app.services.trust_score import calculate_trust_score
+from app.services.notifications import send_notification
 from app.core.logger import logger
 
 router = APIRouter()
@@ -371,6 +373,23 @@ async def review_cv_parse_result(
     # Chuyển trạng thái CV thành PENDING_VERIFICATION (Đã Review xong, chờ Admin duyệt)
     doc.status = DocumentStatusEnum.PENDING_VERIFICATION
     db.commit()
+
+    # Tạo thông báo cho Freelancer: xác nhận đã nộp hồ sơ CV thành công
+    try:
+        confirmed_count = len(review_req.changes)
+        send_notification(
+            db=db,
+            user_id=doc.freelancer_id,
+            notification_type=NotificationType.SYSTEM,
+            title="Đã nộp hồ sơ CV",
+            message=(
+                f"Hồ sơ CV của bạn đã được xác nhận {confirmed_count} trường thông tin "
+                "và đang chờ Admin phê duyệt. Bạn sẽ nhận thông báo khi có kết quả."
+            ),
+            action_url=f"/freelancer/trust-passport",
+        )
+    except Exception as e:
+        logger.warning(f"Không thể tạo notification sau review: {e}")
 
     logger.info(f"Freelancer đã Review và Cập nhật CV {document_id}. Trạng thái mới: PENDING_VERIFICATION")
     return BaseResponse.create(

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiFetch } from "@/api/client";
-import { ENDPOINT_NOTIFICATIONS } from "@/api/endpoints";
+import { ENDPOINT_NOTIFICATIONS, ENDPOINT_NOTIFICATIONS_ID_READ } from "@/api/endpoints";
 import { QK_NOTIFICATIONS } from "@/api/queryKeys";
 
 export interface Notification {
@@ -26,7 +26,7 @@ export function useMarkNotificationRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) =>
-      apiFetch<void>(`${ENDPOINT_NOTIFICATIONS}/${id}/read`, { method: "PATCH" }),
+      apiFetch<void>(ENDPOINT_NOTIFICATIONS_ID_READ(id), { method: "PATCH" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [QK_NOTIFICATIONS] });
     },

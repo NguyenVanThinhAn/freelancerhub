@@ -129,6 +129,7 @@ export function useCVResult(documentId: string | null) {
     queryKey: documentId ? QK_CV_RESULT(documentId) : ["cv", "result", "noop"],
     queryFn: () => apiGet<CVParseResultDetailResponse>(ENDPOINT_CV_DOCUMENT_RESULT(documentId!)),
     enabled: !!documentId,
+    refetchInterval: 3000,
   });
 }
 

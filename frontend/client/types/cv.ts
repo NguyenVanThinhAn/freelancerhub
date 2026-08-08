@@ -79,15 +79,15 @@ export interface CVReviewRequest {
 
 export interface TrustPassportBadge {
   id: string;
-  freelancer_id: string;
-  claim_type: string;
-  claim_value: string;
-  evidence_level: EvidenceLevel;
-  expires_at: string | null;
+  fieldPath: string;
+  value: unknown;
+  badgeName: string;
+  verifiedAt: string;
 }
 
 export interface TrustPassport {
-  freelancer_id: string;
-  trust_score: number;
+  freelancerId: string;
+  trustScore: number;
+  totalVerifiedBadges: number;
   badges: TrustPassportBadge[];
 }
