@@ -15,7 +15,9 @@ router = APIRouter()
 
 
 class CreateThreadRequest(BaseModel):
-    participant_id: str
+    # Accept cả UUID (cũ) lẫn email (mới). Ít nhất 1 trong 2 phải có.
+    participant_id: str | None = None
+    participant_email: str | None = None
 
 
 @router.get('/notifications')
@@ -48,15 +50,38 @@ def mark_notification_read(request: Request, notification_id: str, current_user:
 
 @router.post('/chat/threads')
 def create_chat_thread(request: Request, payload: CreateThreadRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    participant_user = db.query(User).filter(User.id == payload.participant_id).first()
-    if not participant_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Người dùng không tồn tại')
+    participant_user = None
 
-    existing_thread = db.query(ChatThread).join(ThreadParticipant).filter(
-        ThreadParticipant.user_id == current_user.id
-    ).join(ThreadParticipant, ChatThread.id == ThreadParticipant.thread_id).filter(
-        ChatThread.participants.any(user_id == payload.participant_id)
-    ).first()
+    if payload.participant_email:
+        email = payload.participant_email.strip().lower()
+        participant_user = db.query(User).filter(User.email == email).first()
+        if not participant_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Không tìm thấy người dùng với email "{email}"')
+    elif payload.participant_id:
+        participant_user = db.query(User).filter(User.id == payload.participant_id).first()
+        if not participant_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Người dùng không tồn tại')
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Cần cung cấp participant_id hoặc participant_email')
+
+    if participant_user.id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Không thể tạo luồng chat với chính mình')
+
+    # Check existing thread between current_user and participant_user.
+    # We need: WHERE thread has participant SELF AND participant OTHER.
+    # Use correlated subqueries (avoid alias ambiguity in SQL).
+    existing_thread = (
+        db.query(ChatThread)
+        .filter(
+            ChatThread.id.in_(
+                db.query(ThreadParticipant.thread_id).filter(ThreadParticipant.user_id == current_user.id)
+            ),
+            ChatThread.id.in_(
+                db.query(ThreadParticipant.thread_id).filter(ThreadParticipant.user_id == participant_user.id)
+            ),
+        )
+        .first()
+    )
 
     if existing_thread:
         return BaseResponse.create(
@@ -73,7 +98,7 @@ def create_chat_thread(request: Request, payload: CreateThreadRequest, current_u
     db.flush()
 
     participant_self = ThreadParticipant(thread_id=thread.id, user_id=current_user.id)
-    participant_other = ThreadParticipant(thread_id=thread.id, user_id=payload.participant_id)
+    participant_other = ThreadParticipant(thread_id=thread.id, user_id=participant_user.id)
     db.add(participant_self)
     db.add(participant_other)
     db.commit()

@@ -41,7 +41,7 @@ export default function Messages() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [showNewThread, setShowNewThread] = useState(false);
-  const [newParticipantId, setNewParticipantId] = useState("");
+  const [newParticipantEmail, setNewParticipantEmail] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: threads, isLoading: threadsLoading } = useQuery({
@@ -72,13 +72,13 @@ export default function Messages() {
   });
 
   const createThread = useMutation({
-    mutationFn: (participantId: string) =>
-      apiPost<{ thread_id: string }>(ENDPOINT_CHAT_THREADS, { participant_id: participantId }),
+    mutationFn: (email: string) =>
+      apiPost<{ thread_id: string }>(ENDPOINT_CHAT_THREADS, { participant_email: email }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["chat", "threads"] });
       setSelectedThreadId(res.thread_id);
       setShowNewThread(false);
-      setNewParticipantId("");
+      setNewParticipantEmail("");
       toast.success("Đã tạo cuộc trò chuyện");
     },
     onError: (err: unknown) => {
@@ -234,11 +234,17 @@ export default function Messages() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <h3 className="mb-3 text-sm font-bold">Tạo cuộc trò chuyện mới</h3>
-            <p className="mb-3 text-xs text-slate-500">Nhập User ID của người bạn muốn chat cùng.</p>
+            <p className="mb-3 text-xs text-slate-500">Nhập email của người bạn muốn chat cùng.</p>
             <input
-              value={newParticipantId}
-              onChange={(e) => setNewParticipantId(e.target.value)}
-              placeholder="UUID người dùng..."
+              type="email"
+              value={newParticipantEmail}
+              onChange={(e) => setNewParticipantEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newParticipantEmail.trim() && !createThread.isPending) {
+                  createThread.mutate(newParticipantEmail.trim());
+                }
+              }}
+              placeholder="email@example.com"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[11px] outline-none focus:border-indigo-300"
             />
             <div className="mt-4 flex justify-end gap-2">
@@ -246,7 +252,7 @@ export default function Messages() {
                 type="button"
                 onClick={() => {
                   setShowNewThread(false);
-                  setNewParticipantId("");
+                  setNewParticipantEmail("");
                 }}
                 className="rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-bold text-slate-600"
               >
@@ -254,8 +260,8 @@ export default function Messages() {
               </button>
               <button
                 type="button"
-                onClick={() => newParticipantId.trim() && createThread.mutate(newParticipantId.trim())}
-                disabled={!newParticipantId.trim() || createThread.isPending}
+                onClick={() => newParticipantEmail.trim() && createThread.mutate(newParticipantEmail.trim())}
+                disabled={!newParticipantEmail.trim() || createThread.isPending}
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-[10px] font-bold text-white disabled:opacity-50"
               >
                 {createThread.isPending ? "Đang tạo..." : "Tạo"}

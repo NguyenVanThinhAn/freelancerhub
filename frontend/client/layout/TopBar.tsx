@@ -10,14 +10,14 @@ export interface TopBarProps {
   searchPlaceholder?: string;
 }
 
-export function TopBar({ onOpenSidebar, searchPlaceholder = "Tìm kiếm ứng viên, kỹ năng, tin tuyển dụng..." }: TopBarProps) {
+export function TopBar({ onOpenSidebar, searchPlaceholder }: TopBarProps) {
   const { user, logout } = useAuth();
   const userRole = (user as any)?.role || "freelancer";
   const isBusiness = userRole === "business" || userRole === "enterprise";
 
   const { data: notifications } = useNotifications();
   const { data: orgProfile } = useOrganizationProfile({ enabled: isBusiness });
-  
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -32,12 +32,15 @@ export function TopBar({ onOpenSidebar, searchPlaceholder = "Tìm kiếm ứng v
   }, []);
 
   const unreadCount = notifications?.filter((n) => !n.is_read).length ?? 0;
-  
+
   const displayName = isBusiness
-    ? (orgProfile?.name ?? "Doanh nghiệp") 
+    ? (orgProfile?.name ?? "Doanh nghiệp")
     : (user as any)?.email?.split("@")[0] ?? "Freelancer";
-  
+
   const roleLabel = userRole === "admin" ? "Admin" : userRole === "business" || userRole === "enterprise" ? "Enterprise" : "Freelancer";
+
+  const resolvedPlaceholder =
+    searchPlaceholder ?? (isBusiness ? "Tìm kiếm ứng viên, kỹ năng, tin tuyển dụng…" : "Tìm kiếm công việc, dự án, kỹ năng…");
 
   return (
     <header className="flex h-[72px] items-center justify-between border-b border-slate-200/80 bg-white px-4 sm:px-7">
@@ -47,7 +50,7 @@ export function TopBar({ onOpenSidebar, searchPlaceholder = "Tìm kiếm ứng v
         </button>
         <div className="relative hidden w-[340px] md:block">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input placeholder={searchPlaceholder} className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-12 text-xs outline-none placeholder:text-slate-400 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />
+          <input placeholder={resolvedPlaceholder} className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-12 text-xs outline-none placeholder:text-slate-400 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100" />
           <span className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] text-slate-400">⌘ K</span>
         </div>
         <span className="flex items-center gap-2 lg:hidden">
