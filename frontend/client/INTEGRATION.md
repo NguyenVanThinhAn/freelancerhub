@@ -5,7 +5,7 @@
 > **Phạm vi:** Toàn bộ frontend (`frontend/client/`): 15 file page (`pages/*.tsx` × 15, trong đó `NotFound.tsx` gắn với route catch-all `*`) — 14 path mount riêng biệt + 1 catch-all = 15 `<Route>` trong `App.tsx`; 71 endpoint của backend; theo Sprint 1–4.
 > **Quyết định kiến trúc (đã chốt):**
 > 1. **Auth:** JWT lưu `localStorage` (`access_token`, `refresh_token`).
-> 2. **Network:** Vite proxy `/api/v1/*` → `http://localhost:8000/api/v1/*` (chỉ dùng trong dev). Production build sẽ dùng `VITE_API_BASE` để override.
+> 2. **Network:** Vite proxy `/api/v1/*` → `http://localhost:${PORT_API}/api/v1/*` (chỉ dùng trong dev). Production build sẽ dùng `VITE_API_BASE` để override. Mọi port đọc từ env — xem §16.7 của `INDEX.md` và `./scripts/dev.sh`.
 > 3. **Data layer:** React Query (`@tanstack/react-query` đã cài ở `App.tsx:7,25,28,53`).
 
 ---

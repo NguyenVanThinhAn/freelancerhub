@@ -4,7 +4,10 @@ import cors from "cors";
 import proxy from "express-http-proxy";
 import { handleDemo } from "./routes/demo.js";
 
-const API_TARGET = process.env.API_TARGET ?? "http://localhost:8000";
+// API target — đọc từ env để đồng bộ với scripts/dev.sh và vite.config.ts.
+// Dev:    PORT_API=8000  → http://localhost:8000
+// Prod:   set PORT_API trên hosting platform (Netlify/Lovable/Self-host)
+const API_TARGET = process.env.API_TARGET ?? `http://localhost:${process.env.PORT_API ?? "8000"}`;
 
 export function createServer() {
   const app = express();

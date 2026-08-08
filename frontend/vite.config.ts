@@ -3,14 +3,20 @@ import react from "@vitejs/plugin-react";
 import path from "node:path";
 import { createServer } from "./server";
 
+// Port config — đọc từ env để đồng bộ với scripts/dev.sh và server/index.ts.
+// Dev:   PORT_API=8000 PORT_WEB=8080 (mặc định)
+// Prod:  set trên hosting platform (Netlify / Lovable) — build output đi qua Express ở server/index.ts
+const PORT_API = process.env.PORT_API ?? "8000";
+const PORT_WEB = process.env.PORT_WEB ?? "8080";
+
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   server: {
     host: "::",
-    port: 8080,
+    port: Number(PORT_WEB),
     proxy: {
       "/api/v1": {
-        target: "http://localhost:8000",
+        target: `http://localhost:${PORT_API}`,
         changeOrigin: true,
       },
     },

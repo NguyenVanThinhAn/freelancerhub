@@ -457,6 +457,30 @@ Browser → Vite :8080 → proxy → FastAPI :8000
 - Vite proxy config: `vite.config.ts:11-16`
 - `target: "http://localhost:8000"` — verify backend is on port 8000
 
+### 16.7 Hosting Targets (sau lần unify 08/08/2026)
+
+Stack hiện có **3 target** deploy, dùng chung 1 bộ port qua env (`PORT_API=8000`, `PORT_WEB=8080`).
+
+| Target | Config file | Lệnh chạy | URL output |
+|---|---|---|---|
+| **Dev (local)** | `scripts/dev.sh` → `scripts/run-all.mjs` | `./scripts/dev.sh` | web `:8080`, api `:8000` |
+| **Netlify** | `frontend/netlify.toml` + `netlify/functions/` | Netlify auto-detect | SPA + Netlify Functions |
+| **Lovable / Firebase Studio** | `frontend/builder.config.json` | platform auto | `dist/spa` |
+
+**Quy tắc chung:**
+- Port/target đọc từ env (`PORT_API`, `PORT_WEB`) — KHÔNG hardcode trong `vite.config.ts` / `server/index.ts`.
+- Trong dev: `./scripts/dev.sh` chạy 1 lần → Vite + FastAPI cùng lúc (concurrently-style, prefix `[api]` / `[web]`).
+- Trong prod (Netlify hoặc Lovable): set `API_TARGET` / `PORT_API` trên hosting platform trỏ về FastAPI backend public URL.
+
+**File mới / đã sửa:**
+- `scripts/dev.sh` — wrapper shell (load env, exec Node runner)
+- `scripts/run-all.mjs` — Node script spawn cả 2 process, pipe log với prefix
+- `scripts/dev-stack.env.example` — template cho env (copy thành `dev-stack.env` để tùy biến)
+- `frontend/package.json` — thêm `dev:web` (chỉ Vite), `dev:all` (cả 2 qua Node script)
+- `frontend/vite.config.ts` — đọc `PORT_API` / `PORT_WEB` thay vì hardcode
+- `frontend/server/index.ts` — `API_TARGET` default = `http://localhost:${PORT_API}`
+- `/tmp/start-frontend.sh` — DEPRECATED, dùng `./scripts/dev.sh` thay thế.
+
 ---
 
 ## 17. Rule Files

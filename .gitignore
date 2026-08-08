@@ -71,6 +71,11 @@ logs/
 *.log
 /tmp/*.log
 
+# ===== Dev stack (scripts/dev.sh) =====
+# File thật dev-stack.env không commit (copy từ dev-stack.env.example nếu cần tùy biến).
+scripts/dev-stack.env
+
+
 # ===== Uploads / user data =====
 uploads/
 backend/uploads/
