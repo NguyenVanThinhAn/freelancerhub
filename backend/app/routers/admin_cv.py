@@ -252,19 +252,28 @@ async def make_admin_verification_decision(
     """
     # 1) Idempotency check (theo MASTER-DOC §M.6: "decision endpoint must be idempotent")
     idem_key = request.headers.get("Idempotency-Key")
-    raw_body = await request.body()
-    body_hash = hashlib.sha256(raw_body).hexdigest()
+    # Limit key length to avoid abuse (DB column VARCHAR(100))
+    if idem_key and len(idem_key) > 100:
+        idem_key = idem_key[:100]
+    body_hash = ""
     if idem_key:
-        cached = idem_get(idem_key)
-        if cached:
-            if cached["payload_hash"] != body_hash:
-                # Same key but different payload → reject the replay
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Idempotency-Key đã được dùng với payload khác. Vui lòng tạo key mới.",
-                )
-            # Same key + same payload → return cached response without re-execution
-            return cached["response"]
+        try:
+            raw_body = await request.body()
+            body_hash = hashlib.sha256(raw_body).hexdigest()
+        except Exception:
+            # Body không đọc được (client disconnect, etc.) — fall through,
+            # nhưng KHÔNG cache với key này (hash rỗng sẽ conflict với mọi replay).
+            idem_key = None
+        else:
+            cached = idem_get(idem_key)
+            if cached:
+                if cached["payload_hash"] != body_hash:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Idempotency-Key đã được dùng với payload khác. Vui lòng tạo key mới.",
+                    )
+                # Same key + same payload → return cached response without re-execution
+                return cached["response"]
 
     case = db.query(VerificationCase).filter(VerificationCase.id == case_id).first()
     if not case:

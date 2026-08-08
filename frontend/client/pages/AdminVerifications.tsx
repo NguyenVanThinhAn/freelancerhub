@@ -177,6 +177,9 @@ export default function AdminVerifications() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "verifications"] });
       qc.invalidateQueries({
+        queryKey: ["admin", "verifications", selectedCaseId],
+      });
+      qc.invalidateQueries({
         queryKey: ["admin", "verifications", "audit", selectedCaseId],
       });
       toast.success("Đã gửi quyết định");
