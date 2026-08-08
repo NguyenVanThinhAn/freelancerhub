@@ -38,7 +38,6 @@ export default function Wallet() {
 
   const balance = wallet?.balance ?? 0;
   const locked = wallet?.locked_balance ?? 0;
-  const usdRate = 25100;
   const total = balance + locked;
   return (
     <BusinessShell active="Thanh toán">
@@ -67,7 +66,6 @@ export default function Wallet() {
           </div>
           <p className="mt-3 text-[10px] text-slate-400">Số dư khả dụng</p>
           <p className="text-xl font-extrabold">{walletLoading ? "—" : formatCurrency(balance)}</p>
-          <p className="text-[9px] text-slate-400">≈ ${walletLoading ? "—" : (balance / usdRate).toFixed(2)} USD</p>
         </section>
         <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
@@ -76,15 +74,14 @@ export default function Wallet() {
           </div>
           <p className="mt-3 text-[10px] text-slate-400">Ký quỹ đang giữ</p>
           <p className="text-xl font-extrabold">{walletLoading ? "—" : formatCurrency(locked)}</p>
-          <p className="text-[9px] text-slate-400">≈ ${walletLoading ? "—" : (locked / usdRate).toFixed(2)} USD</p>
         </section>
         <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-50 text-sky-600"><ArrowUpRight size={17} /></div>
             <span className="text-[9px] font-bold text-emerald-600">↗ 18.6%</span>
           </div>
-          <p className="mt-3 text-[10px] text-slate-400">Tổng đã chi</p>
-          <p className="text-xl font-extrabold">184,320,000 ₫</p>
+          <p className="mt-3 text-[10px] text-slate-400">Tổng đã chi (30 ngày)</p>
+          <p className="text-xl font-extrabold">{txLoading ? "—" : formatCurrency((transactions || []).filter(tx => tx.transaction_type === "PAYMENT_SENT" || tx.transaction_type === "WITHDRAWAL").reduce((s, tx) => s + tx.amount, 0))}</p>
           <p className="text-[9px] text-slate-400">So với 30 ngày trước</p>
         </section>
       </div>
@@ -184,47 +181,7 @@ export default function Wallet() {
           </section>
         </div>
         <aside className="space-y-5">
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-extrabold">Phân bổ ký quỹ theo dự án</h2>
-              <button className="text-[9px] font-bold text-indigo-600">Xem báo cáo</button>
-            </div>
-            <div className="mx-auto mt-4 flex h-32 w-32 items-center justify-center rounded-full" style={{ background: "conic-gradient(#f97316 0 35%, #22c55e 35% 58%, #6366f1 58% 78%, #a78bfa 78% 100%)" }}>
-              <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white">
-                <span className="text-[10px] text-slate-400">Tổng ký quỹ</span>
-                <b className="text-base">96.250.000 ₫</b>
-              </div>
-            </div>
-            <div className="mt-4 space-y-2 text-[8px]">
-              {["Xây dựng Website E-commerce", "Ứng dụng Mobile Banking", "Thiết kế UI/UX Dashboard", "Website tuyển dụng"].map((name, i) => (
-                <div key={name} className="flex items-center justify-between">
-                  <span><i className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${["bg-orange-500", "bg-emerald-500", "bg-indigo-500", "bg-violet-400"][i]}`} />{name}</span>
-                  <b>{["25.000.000 ₫", "30.000.000 ₫", "12.000.000 ₫", "8.000.000 ₫"][i]}</b>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-extrabold">Phương thức thanh toán</h2>
-              <button type="button" onClick={() => alert("Quản lý phương thức thanh toán — sẽ kết nối backend ở Sprint 4")} className="text-[9px] font-bold text-indigo-600">Quản lý</button>
-            </div>
-            <div className="mt-3 rounded-lg border border-slate-200 p-3">
-              <div className="flex items-center gap-2">
-                <Banknote size={15} className="text-emerald-600" />
-                <div>
-                  <p className="text-[9px] font-bold">Vietcombank – CN Quận 1</p>
-                  <p className="text-[8px] text-slate-400">1234 5678 9012 3456</p>
-                </div>
-                <span className="ml-auto rounded bg-emerald-50 px-1.5 py-1 text-[8px] text-emerald-600">Mặc định</span>
-              </div>
-            </div>
-            <button type="button" onClick={() => alert("Thêm tài khoản ngân hàng — sẽ kết nối backend ở Sprint 4")} className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-slate-300 py-2 text-[9px] font-bold text-indigo-600"><Plus size={11} />Thêm tài khoản ngân hàng</button>
-            <div className="mt-3 flex gap-2">
-              <div className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 p-2"><CreditCard size={14} className="text-pink-500" /><span className="text-[9px] font-bold">MoMo</span></div>
-              <div className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 p-2"><CreditCard size={14} className="text-blue-500" /><span className="text-[9px] font-bold">ZaloPay</span></div>
-            </div>
-          </section>
+          {/* Removed static charts and banks as per plan */}
         </aside>
       </div>
 

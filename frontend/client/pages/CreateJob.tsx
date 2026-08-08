@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ChevronDown, Pencil, Plus, Save, Sparkles, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { BusinessShell } from "@/layout/BusinessShell";
 import { JobStepper } from "@/components/JobStepper";
 import { useCreateJob, useCategories } from "@/hooks/use-jobs";
@@ -47,12 +48,15 @@ function SkillTag({ skill, onRemove, variant = "primary" }: { skill: string; onR
 
 export default function CreateJob() {
   const navigate = useNavigate();
+  const location = useLocation();
   const createJob = useCreateJob();
   const { data: categories } = useCategories();
 
-  const [form, setForm] = useState<JobCreate>(EMPTY_FORM);
+  const initialForm = (location.state as any)?.form || EMPTY_FORM;
+
+  const [form, setForm] = useState<JobCreate>(initialForm);
   const [skillInput, setSkillInput] = useState("");
-  const [requiredSkills, setRequiredSkills] = useState<string[]>(["SQL", "UML", "Business Analysis"]);
+  const [requiredSkills, setRequiredSkills] = useState<string[]>(initialForm.skill_ids?.length ? initialForm.skill_ids : ["SQL", "UML", "Business Analysis"]);
   const [optionalSkills, setOptionalSkills] = useState<string[]>(["Power BI", "Agile/Scrum", "Jira"]);
   const [skillType, setSkillType] = useState<"required" | "optional">("required");
 
@@ -72,18 +76,18 @@ export default function CreateJob() {
   };
 
   const handleSubmit = () => {
-    if (!form.title.trim()) return;
-    createJob.mutate(
-      { ...form, skill_ids: requiredSkills },
-      {
-        onSuccess: (data) => {
-          navigate("/ai-processing");
-        },
-      }
-    );
+    if (!form.title.trim() || !form.description.trim()) {
+      toast.error("Vui lòng nhập vị trí và mô tả ngắn");
+      return;
+    }
+    navigate("/ai-processing", { 
+      state: { 
+        jobForm: { ...form, skill_ids: requiredSkills }
+      } 
+    });
   };
 
-  const isSubmitting = createJob.isPending;
+  const isSubmitting = false; // Moved to AIProcessing
 
   return (
     <BusinessShell active="Tạo JD">

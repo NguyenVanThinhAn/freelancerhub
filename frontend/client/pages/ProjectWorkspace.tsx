@@ -1,24 +1,15 @@
 import { useState } from "react";
-import { CalendarDays, Check, FileText, Loader2, MoreHorizontal, Upload } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { CalendarDays, Check, FileText, Loader2, MoreHorizontal, Upload, Plus } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { BusinessShell } from "@/layout/BusinessShell";
 import { useContract, useMyContracts, useSubmitMilestone, MILESTONE_STATUS_LABELS, MILESTONE_STATUS_TONE, formatCurrency } from "@/hooks/use-contracts";
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from "@/hooks/use-tasks";
+import type { Task } from "@/hooks/use-tasks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 type ProjectTab = "overview" | "milestone" | "task" | "document" | "discussion" | "report";
 
-// Mock task list (tasks not in backend — kept as-is)
-const TASKS = [
-  ["T-23", "Nghiên cứu & Phân tích yêu cầu", "M1", "20/05/2025", "Đã hoàn thành"],
-  ["T-24", "Wireframe các màn hình chính", "M1", "23/05/2025", "Đã hoàn thành"],
-  ["T-31", "Thiết kế UI Trang chủ & Đăng nhập", "M2", "30/05/2025", "Đang thực hiện"],
-  ["T-32", "Thiết kế UI Trang khóa học", "M2", "05/06/2025", "Đang thực hiện"],
-  ["T-33", "Thiết kế giao diện các trang bên trong", "M3", "10/06/2025", "Chưa bắt đầu"],
-  ["T-41", "Prototype & Bàn giao", "M4", "15/06/2025", "Chưa bắt đầu"],
-];
-
-// Milestone status tone map
 const TASK_STATUS_TONE: Record<string, string> = {
   "Đã hoàn thành": "bg-emerald-50 text-emerald-600",
   "Đang thực hiện": "bg-sky-50 text-sky-600",
@@ -32,17 +23,28 @@ function MilestoneDot({ index }: { index: number }) {
 
 export default function ProjectWorkspace() {
   const navigate = useNavigate();
+  const { contractId: paramContractId } = useParams();
   const [activeTab, setActiveTab] = useState<ProjectTab>("overview");
 
-  // Lấy contract đầu tiên từ danh sách (hoặc dùng mock contractId)
+  // Nếu không có contractId trên URL, tự động lấy hợp đồng đầu tiên của user
   const { data: contracts } = useMyContracts();
-  const contractId = contracts?.[0]?.id ?? "";
+  const contractId = paramContractId || (contracts?.[0]?.id ?? "");
 
   const { data: contract, isLoading } = useContract(contractId);
+  const { data: tasks = [], isLoading: isLoadingTasks } = useTasks(contractId);
+  
   const submitMilestone = useSubmitMilestone();
+  const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
 
   const [submitContent, setSubmitContent] = useState("");
   const [submittingFor, setSubmittingFor] = useState<string | null>(null);
+
+  // Task form state
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskMilestone, setNewTaskMilestone] = useState("");
 
   const milestones = contract?.milestones ?? [];
   const completedMilestones = milestones.filter((m) => m.status === "APPROVED" || m.status === "PAID").length;
@@ -67,15 +69,41 @@ export default function ProjectWorkspace() {
     );
   };
 
+  const handleCreateTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle) return;
+    
+    createTask.mutate(
+      { 
+        contract_id: contractId,
+        title: newTaskTitle,
+        milestone_id: newTaskMilestone || undefined
+      },
+      {
+        onSuccess: () => {
+          setNewTaskTitle("");
+          setNewTaskMilestone("");
+          setShowTaskForm(false);
+        }
+      }
+    );
+  };
+
+  const toggleTaskStatus = (task: Task) => {
+    const nextStatus = task.status === "Chưa bắt đầu" ? "Đang thực hiện" : 
+                      task.status === "Đang thực hiện" ? "Đã hoàn thành" : "Chưa bắt đầu";
+    updateTask.mutate({ taskId: task.id, payload: { status: nextStatus } });
+  };
+
   return (
-    <BusinessShell active="Hợp đồng">
+    <BusinessShell active="Workspace">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="mb-1 text-[11px] text-slate-400">Workspace / Dự án của tôi</p>
           <h1 className="text-[24px] font-extrabold tracking-tight">Workspace dự án</h1>
         </div>
-        <button type="button" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-indigo-600">
-          Mở trên Marketplace ↗
+        <button type="button" onClick={() => navigate("/jobs")} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-slate-600">
+          Quay lại danh sách
         </button>
       </div>
 
@@ -131,7 +159,7 @@ export default function ProjectWorkspace() {
         </section>
       ) : (
         <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <p className="text-center text-xs text-slate-400">Chưa có hợp đồng nào.</p>
+          <p className="text-center text-xs text-slate-400">Không tìm thấy hợp đồng.</p>
         </section>
       )}
 
@@ -161,7 +189,7 @@ export default function ProjectWorkspace() {
         <div className="space-y-5">
           {activeTab === "overview" && (
             <>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {/* Progress */}
                 <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
                   <p className="text-[10px] font-bold text-slate-500">Tiến độ dự án</p>
@@ -182,15 +210,6 @@ export default function ProjectWorkspace() {
                   </div>
                 </section>
 
-                {/* Time (mock) */}
-                <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-bold text-slate-500">Thời gian đã sử dụng</p>
-                  <p className="mt-3 text-xl font-extrabold">18h 30m</p>
-                  <p className="text-[9px] text-slate-400">/ 40h 00m tổng thời gian</p>
-                  <div className="mt-3 h-1.5 rounded-full bg-slate-100"><div className="h-full w-[46%] rounded-full bg-indigo-500" /></div>
-                  <p className="mt-1 text-right text-[9px] text-slate-400">46%</p>
-                </section>
-
                 {/* Next task */}
                 <section className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm">
                   <div className="flex items-center justify-between">
@@ -201,53 +220,55 @@ export default function ProjectWorkspace() {
                       </span>
                     )}
                   </div>
-                  <p className="mt-3 text-[11px] font-extrabold">{activeMilestone?.title ?? "—"}</p>
+                  <p className="mt-3 text-[11px] font-extrabold">{activeMilestone?.title ?? "Chưa có Milestone đang thực hiện"}</p>
                   {activeMilestone?.due_date && (
                     <p className="mt-1 text-[9px] text-slate-400">Hạn: {new Date(activeMilestone.due_date).toLocaleDateString("vi-VN")}</p>
                   )}
-                  {submittingFor ? (
-                    <div className="mt-3 space-y-2">
-                      <textarea
-                        value={submitContent}
-                        onChange={(e) => setSubmitContent(e.target.value)}
-                        placeholder="Mô tả bài nộp..."
-                        rows={2}
-                        className="w-full resize-none rounded-lg border border-indigo-200 p-2 text-[9px] outline-none focus:border-indigo-400"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSubmitWork(submittingFor)}
-                          disabled={submitMilestone.isPending}
-                          className="flex-1 rounded-lg bg-indigo-600 py-1.5 text-[10px] font-bold text-white disabled:opacity-50"
-                        >
-                          {submitMilestone.isPending ? <Loader2 size={12} className="animate-spin mx-auto" /> : "Nộp bài"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setSubmittingFor(null); setSubmitContent(""); }}
-                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-500"
-                        >
-                          Hủy
-                        </button>
+                  {activeMilestone && (
+                    submittingFor ? (
+                      <div className="mt-3 space-y-2">
+                        <textarea
+                          value={submitContent}
+                          onChange={(e) => setSubmitContent(e.target.value)}
+                          placeholder="Mô tả bài nộp..."
+                          rows={2}
+                          className="w-full resize-none rounded-lg border border-indigo-200 p-2 text-[9px] outline-none focus:border-indigo-400"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSubmitWork(submittingFor)}
+                            disabled={submitMilestone.isPending}
+                            className="flex-1 rounded-lg bg-indigo-600 py-1.5 text-[10px] font-bold text-white disabled:opacity-50"
+                          >
+                            {submitMilestone.isPending ? <Loader2 size={12} className="animate-spin mx-auto" /> : "Nộp bài"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setSubmittingFor(null); setSubmitContent(""); }}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-500"
+                          >
+                            Hủy
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => activeMilestone && setSubmittingFor(activeMilestone.id)}
-                      className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg bg-indigo-600 py-2 text-[10px] font-bold text-white"
-                    >
-                      <Upload size={12} /> Nộp bài làm
-                    </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => activeMilestone && setSubmittingFor(activeMilestone.id)}
+                        className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg bg-indigo-600 py-2 text-[10px] font-bold text-white"
+                      >
+                        <Upload size={12} /> Nộp bài làm
+                      </button>
+                    )
                   )}
                 </section>
               </div>
 
-              {/* Recent tasks (mock data — tasks not in backend) */}
+              {/* Dynamic tasks */}
               <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-xs font-extrabold">Công việc gần đây</h2>
+                  <h2 className="text-xs font-extrabold">Công việc dự án ({tasks.length})</h2>
                   <button type="button" onClick={() => setActiveTab("task")} className="text-[10px] font-bold text-indigo-600">Xem tất cả công việc →</button>
                 </div>
                 <div className="overflow-x-auto">
@@ -257,26 +278,49 @@ export default function ProjectWorkspace() {
                         <th className="py-2">Mã</th>
                         <th>Công việc</th>
                         <th>Milestone</th>
-                        <th>Hạn hoàn thành</th>
                         <th>Trạng thái</th>
                         <th />
                       </tr>
                     </thead>
                     <tbody>
-                      {TASKS.map((task) => (
-                        <tr key={task[0]} className="border-b border-slate-50">
-                          <td className="py-3 text-slate-400">{task[0]}</td>
-                          <td className="font-semibold">{task[1]}</td>
-                          <td><span className="rounded bg-indigo-50 px-1.5 py-1 text-[8px] text-indigo-600">{task[2]}</span></td>
-                          <td className="text-slate-500">{task[3]}</td>
-                          <td>
-                            <span className={`rounded-full px-2 py-1 text-[8px] font-semibold ${TASK_STATUS_TONE[task[4]] ?? ""}`}>
-                              {task[4]}
-                            </span>
+                      {tasks.slice(0, 5).map((task) => {
+                        const msIndex = milestones.findIndex(m => m.id === task.milestone_id);
+                        return (
+                          <tr key={task.id} className="border-b border-slate-50">
+                            <td className="py-3 text-slate-400">{task.id.slice(0, 8)}</td>
+                            <td className="font-semibold">{task.title}</td>
+                            <td>
+                              <span className="rounded bg-indigo-50 px-1.5 py-1 text-[8px] text-indigo-600">
+                                {msIndex >= 0 ? `MS${msIndex + 1}` : "—"}
+                              </span>
+                            </td>
+                            <td>
+                              <button 
+                                onClick={() => toggleTaskStatus(task)}
+                                className={`rounded-full px-2 py-1 text-[8px] font-semibold cursor-pointer transition-colors ${TASK_STATUS_TONE[task.status] ?? ""}`}
+                              >
+                                {task.status}
+                              </button>
+                            </td>
+                            <td>
+                              <button onClick={() => {
+                                if (confirm("Bạn có chắc muốn xóa công việc này?")) {
+                                  deleteTask.mutate({ taskId: task.id, contractId });
+                                }
+                              }} className="text-red-400 hover:text-red-600">
+                                Xóa
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {tasks.length === 0 && !isLoadingTasks && (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
+                            Chưa có công việc nào. Hãy chuyển sang tab "Công việc" để tạo mới.
                           </td>
-                          <td><MoreHorizontal size={14} className="text-slate-400" /></td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -328,7 +372,47 @@ export default function ProjectWorkspace() {
 
           {activeTab === "task" && (
             <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-              <h2 className="mb-4 text-xs font-extrabold">Tất cả công việc</h2>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xs font-extrabold">Tất cả công việc</h2>
+                <button 
+                  onClick={() => setShowTaskForm(!showTaskForm)}
+                  className="flex items-center gap-1 rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600 hover:bg-indigo-100"
+                >
+                  <Plus size={12} /> {showTaskForm ? "Hủy" : "Thêm việc"}
+                </button>
+              </div>
+
+              {showTaskForm && (
+                <form onSubmit={handleCreateTask} className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/30 p-3 flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label className="mb-1 block text-[9px] font-bold text-slate-500">Tên công việc</label>
+                    <input 
+                      required 
+                      value={newTaskTitle} 
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      placeholder="VD: Thiết kế trang chủ..." 
+                      className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] outline-none" 
+                    />
+                  </div>
+                  <div className="w-32">
+                    <label className="mb-1 block text-[9px] font-bold text-slate-500">Thuộc Milestone</label>
+                    <select 
+                      value={newTaskMilestone}
+                      onChange={(e) => setNewTaskMilestone(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-[10px] outline-none"
+                    >
+                      <option value="">Không bắt buộc</option>
+                      {milestones.map((m, i) => (
+                        <option key={m.id} value={m.id}>MS{i+1}: {m.title.slice(0, 10)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button disabled={createTask.isPending} type="submit" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-indigo-700">
+                    Lưu
+                  </button>
+                </form>
+              )}
+
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[650px] text-left text-[10px]">
                   <thead className="border-y border-slate-100 text-[9px] text-slate-400">
@@ -336,26 +420,49 @@ export default function ProjectWorkspace() {
                       <th className="py-2">Mã</th>
                       <th>Công việc</th>
                       <th>Milestone</th>
-                      <th>Hạn hoàn thành</th>
                       <th>Trạng thái</th>
                       <th />
                     </tr>
                   </thead>
                   <tbody>
-                    {TASKS.map((task) => (
-                      <tr key={task[0]} className="border-b border-slate-50">
-                        <td className="py-3 text-slate-400">{task[0]}</td>
-                        <td className="font-semibold">{task[1]}</td>
-                        <td><span className="rounded bg-indigo-50 px-1.5 py-1 text-[8px] text-indigo-600">{task[2]}</span></td>
-                        <td className="text-slate-500">{task[3]}</td>
-                        <td>
-                          <span className={`rounded-full px-2 py-1 text-[8px] font-semibold ${TASK_STATUS_TONE[task[4]] ?? ""}`}>
-                            {task[4]}
-                          </span>
+                    {tasks.map((task) => {
+                      const msIndex = milestones.findIndex(m => m.id === task.milestone_id);
+                      return (
+                        <tr key={task.id} className="border-b border-slate-50">
+                          <td className="py-3 text-slate-400">{task.id.slice(0, 8)}</td>
+                          <td className="font-semibold">{task.title}</td>
+                          <td>
+                            <span className="rounded bg-indigo-50 px-1.5 py-1 text-[8px] text-indigo-600">
+                              {msIndex >= 0 ? `MS${msIndex + 1}` : "—"}
+                            </span>
+                          </td>
+                          <td>
+                            <button 
+                              onClick={() => toggleTaskStatus(task)}
+                              className={`rounded-full px-2 py-1 text-[8px] font-semibold cursor-pointer transition-colors ${TASK_STATUS_TONE[task.status] ?? ""}`}
+                            >
+                              {task.status}
+                            </button>
+                          </td>
+                          <td>
+                            <button onClick={() => {
+                              if (confirm("Bạn có chắc muốn xóa công việc này?")) {
+                                deleteTask.mutate({ taskId: task.id, contractId });
+                              }
+                            }} className="text-red-400 hover:text-red-600">
+                              <MoreHorizontal size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {tasks.length === 0 && !isLoadingTasks && (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
+                          Chưa có công việc nào.
                         </td>
-                        <td><MoreHorizontal size={14} className="text-slate-400" /></td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -408,7 +515,8 @@ export default function ProjectWorkspace() {
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-extrabold">Hoạt động gần đây</h2>
             </div>
-            <div className="mt-3 space-y-3 text-[9px]">
+            <div className="mt-3 space-y-3 text-[9px] opacity-50">
+              <p className="text-center italic text-slate-400 mb-2">Đang sử dụng dữ liệu tĩnh</p>
               {[
                 ["Mai Anh", "đã bình luận về M2", "30/05/2025 10:15"],
                 ["Bạn", "đã bàn giao cho M2", "30/05/2025 09:42"],
@@ -426,13 +534,16 @@ export default function ProjectWorkspace() {
               <h2 className="text-xs font-extrabold">Thời gian làm việc</h2>
               <button type="button" onClick={() => setActiveTab("report")} className="text-[9px] font-bold text-indigo-600">Xem báo cáo</button>
             </div>
-            <p className="mt-3 text-xl font-extrabold">18h 30m <span className="text-[10px] font-normal text-slate-400">/ 40h 00m</span></p>
-            <div className="mt-2 flex items-center gap-3">
-              <div className="h-24 w-24 rounded-full" style={{ background: "conic-gradient(#536df5 46%, #e9ecff 0)" }} />
-              <div className="space-y-2 text-[9px] text-slate-500">
-                <p>● Thiết kế UI <b>12h 10m (65%)</b></p>
-                <p>● Wireframe & Nghiên cứu <b>4h 20m (23%)</b></p>
-                <p>● Họp & Trao đổi <b>2h (11%)</b></p>
+            <div className="opacity-50">
+              <p className="text-center italic text-[9px] text-slate-400 mb-2 mt-2">Đang sử dụng dữ liệu tĩnh</p>
+              <p className="mt-3 text-xl font-extrabold">18h 30m <span className="text-[10px] font-normal text-slate-400">/ 40h 00m</span></p>
+              <div className="mt-2 flex items-center gap-3">
+                <div className="h-24 w-24 rounded-full" style={{ background: "conic-gradient(#536df5 46%, #e9ecff 0)" }} />
+                <div className="space-y-2 text-[9px] text-slate-500">
+                  <p>● Thiết kế UI <b>12h 10m (65%)</b></p>
+                  <p>● Wireframe & Nghiên cứu <b>4h 20m (23%)</b></p>
+                  <p>● Họp & Trao đổi <b>2h (11%)</b></p>
+                </div>
               </div>
             </div>
           </section>

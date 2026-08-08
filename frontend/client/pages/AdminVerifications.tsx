@@ -1,8 +1,19 @@
 import { useState } from "react";
-import { Check, ChevronRight, FileText, Loader2, X, AlertCircle } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  FileText,
+  Loader2,
+  X,
+  AlertCircle,
+} from "lucide-react";
 import { BusinessShell } from "@/layout/BusinessShell";
 import { apiGet, apiPatch } from "@/api/client";
-import { ENDPOINT_ADMIN_VERIFICATIONS, ENDPOINT_ADMIN_VERIFICATIONS_ID, ENDPOINT_ADMIN_VERIFICATIONS_ID_DECISION } from "@/api/endpoints";
+import {
+  ENDPOINT_ADMIN_VERIFICATIONS,
+  ENDPOINT_ADMIN_VERIFICATIONS_ID,
+  ENDPOINT_ADMIN_VERIFICATIONS_ID_DECISION,
+} from "@/api/endpoints";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -72,7 +83,9 @@ const STATUS_LABEL: Record<string, string> = {
 export default function AdminVerifications() {
   const qc = useQueryClient();
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [decisionMode, setDecisionMode] = useState<"none" | "approve" | "reject" | "partial" | "needs_info">("none");
+  const [decisionMode, setDecisionMode] = useState<
+    "none" | "approve" | "reject" | "partial" | "needs_info"
+  >("none");
   const [reason, setReason] = useState("");
 
   const { data: list, isLoading: listLoading } = useQuery({
@@ -83,14 +96,24 @@ export default function AdminVerifications() {
 
   const { data: detail, isLoading: detailLoading } = useQuery({
     queryKey: ["admin", "verifications", selectedCaseId],
-    queryFn: () => apiGet<VerificationCaseDetail>(ENDPOINT_ADMIN_VERIFICATIONS_ID(selectedCaseId!)),
+    queryFn: () =>
+      apiGet<VerificationCaseDetail>(
+        ENDPOINT_ADMIN_VERIFICATIONS_ID(selectedCaseId!),
+      ),
     enabled: !!selectedCaseId,
     staleTime: 30_000,
   });
 
   const decisionMutation = useMutation({
-    mutationFn: (payload: { action: string; reason: string; verifiedFieldPaths?: string[] }) =>
-      apiPatch<unknown>(ENDPOINT_ADMIN_VERIFICATIONS_ID_DECISION(selectedCaseId!), payload),
+    mutationFn: (payload: {
+      action: string;
+      reason: string;
+      verifiedFieldPaths?: string[];
+    }) =>
+      apiPatch<unknown>(
+        ENDPOINT_ADMIN_VERIFICATIONS_ID_DECISION(selectedCaseId!),
+        payload,
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "verifications"] });
       toast.success("Đã gửi quyết định");
@@ -111,10 +134,15 @@ export default function AdminVerifications() {
   return (
     <BusinessShell active="Admin">
       <div className="mb-5">
-        <p className="mb-1 text-[11px] font-medium text-slate-400">Workspace / Admin</p>
-        <h1 className="text-[24px] font-extrabold tracking-tight">Duyệt hồ sơ xác minh</h1>
+        <p className="mb-1 text-[11px] font-medium text-slate-400">
+          Workspace / Admin
+        </p>
+        <h1 className="text-[24px] font-extrabold tracking-tight">
+          Duyệt hồ sơ xác minh
+        </h1>
         <p className="mt-1 text-xs text-slate-500">
-          Review hồ sơ CV, evidences và đưa ra quyết định xác minh cho freelancer.
+          Review hồ sơ CV, evidences và đưa ra quyết định xác minh cho
+          freelancer.
         </p>
       </div>
 
@@ -123,14 +151,20 @@ export default function AdminVerifications() {
         <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-xs font-extrabold">Hàng đợi</h2>
-            <span className="text-[10px] text-slate-400">{list?.total ?? 0} cases</span>
+            <span className="text-[10px] text-slate-400">
+              {list?.total ?? 0} cases
+            </span>
           </div>
           {listLoading ? (
             <div className="space-y-3">
-              {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))}
             </div>
           ) : !list?.items?.length ? (
-            <p className="py-8 text-center text-xs text-slate-400">Không có case nào.</p>
+            <p className="py-8 text-center text-xs text-slate-400">
+              Không có case nào.
+            </p>
           ) : (
             <div className="space-y-2">
               {list.items.map((c) => (
@@ -145,15 +179,21 @@ export default function AdminVerifications() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-bold text-slate-700">{c.freelancerName}</p>
-                    <span className={`rounded-full px-2 py-1 text-[8px] font-semibold ${STATUS_TONE[c.status] ?? "bg-slate-100 text-slate-500"}`}>
+                    <p className="text-[11px] font-bold text-slate-700">
+                      {c.freelancerName}
+                    </p>
+                    <span
+                      className={`rounded-full px-2 py-1 text-[8px] font-semibold ${STATUS_TONE[c.status] ?? "bg-slate-100 text-slate-500"}`}
+                    >
                       {STATUS_LABEL[c.status] ?? c.status}
                     </span>
                   </div>
                   <p className="text-[9px] text-slate-400">{c.cvFilename}</p>
                   <div className="flex items-center justify-between text-[9px] text-slate-400">
                     <span>📎 {c.evidencesCount} evidences</span>
-                    <span>{new Date(c.submittedAt).toLocaleDateString("vi-VN")}</span>
+                    <span>
+                      {new Date(c.submittedAt).toLocaleDateString("vi-VN")}
+                    </span>
                   </div>
                 </button>
               ))}
@@ -166,7 +206,9 @@ export default function AdminVerifications() {
           {!selectedCaseId ? (
             <div className="py-16 text-center">
               <FileText size={32} className="mx-auto text-slate-300" />
-              <p className="mt-3 text-xs text-slate-400">Chọn một case để xem chi tiết</p>
+              <p className="mt-3 text-xs text-slate-400">
+                Chọn một case để xem chi tiết
+              </p>
             </div>
           ) : detailLoading ? (
             <div className="space-y-3">
@@ -178,15 +220,24 @@ export default function AdminVerifications() {
             <div className="space-y-5">
               <div>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-extrabold">{detail.freelancerName}</h2>
-                  <span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${STATUS_TONE[detail.status] ?? "bg-slate-100 text-slate-500"}`}>
+                  <h2 className="text-sm font-extrabold">
+                    {detail.freelancerName}
+                  </h2>
+                  <span
+                    className={`rounded-full px-2 py-1 text-[9px] font-semibold ${STATUS_TONE[detail.status] ?? "bg-slate-100 text-slate-500"}`}
+                  >
                     {STATUS_LABEL[detail.status] ?? detail.status}
                   </span>
                 </div>
-                <p className="mt-1 text-[10px] text-slate-400">{detail.freelancerEmail} · {detail.cvFilename}</p>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  {detail.freelancerEmail} · {detail.cvFilename}
+                </p>
                 {detail.notes && (
                   <p className="mt-2 rounded-lg bg-slate-50 p-3 text-[10px] text-slate-600">
-                    <AlertCircle size={11} className="mr-1 inline text-amber-500" />
+                    <AlertCircle
+                      size={11}
+                      className="mr-1 inline text-amber-500"
+                    />
                     {detail.notes}
                   </p>
                 )}
@@ -194,13 +245,20 @@ export default function AdminVerifications() {
 
               {/* 3-column data */}
               <div>
-                <h3 className="mb-2 text-[11px] font-bold">Dữ liệu đối soát (3 cột)</h3>
+                <h3 className="mb-2 text-[11px] font-bold">
+                  Dữ liệu đối soát (3 cột)
+                </h3>
                 <div className="space-y-2">
                   {detail.threeColumnData.length === 0 ? (
-                    <p className="text-[10px] text-slate-400">Chưa có dữ liệu trích xuất.</p>
+                    <p className="text-[10px] text-slate-400">
+                      Chưa có dữ liệu trích xuất.
+                    </p>
                   ) : (
                     detail.threeColumnData.slice(0, 10).map((field) => (
-                      <div key={field.fieldPath} className="rounded-lg border border-slate-100 p-2 text-[10px]">
+                      <div
+                        key={field.fieldPath}
+                        className="rounded-lg border border-slate-100 p-2 text-[10px]"
+                      >
                         <div className="flex items-center justify-between">
                           <p className="font-bold">{field.fieldPath}</p>
                           {field.requiresUserReview && (
@@ -211,16 +269,26 @@ export default function AdminVerifications() {
                         </div>
                         <div className="mt-1 grid gap-2 sm:grid-cols-2">
                           <div>
-                            <p className="text-[9px] text-slate-400">AI bóc tách</p>
-                            <p className="font-mono text-[9px]">{JSON.stringify(field.aiExtractedValue)}</p>
+                            <p className="text-[9px] text-slate-400">
+                              AI bóc tách
+                            </p>
+                            <p className="font-mono text-[9px]">
+                              {JSON.stringify(field.aiExtractedValue)}
+                            </p>
                             {field.aiConfidence !== null && (
-                              <p className="text-[9px] text-slate-400">Conf: {(field.aiConfidence * 100).toFixed(0)}%</p>
+                              <p className="text-[9px] text-slate-400">
+                                Conf: {(field.aiConfidence * 100).toFixed(0)}%
+                              </p>
                             )}
                           </div>
                           {field.isUserEdited && (
                             <div>
-                              <p className="text-[9px] text-slate-400">User đã sửa</p>
-                              <p className="font-mono text-[9px]">{JSON.stringify(field.userConfirmedValue)}</p>
+                              <p className="text-[9px] text-slate-400">
+                                User đã sửa
+                              </p>
+                              <p className="font-mono text-[9px]">
+                                {JSON.stringify(field.userConfirmedValue)}
+                              </p>
                             </div>
                           )}
                         </div>
@@ -232,16 +300,25 @@ export default function AdminVerifications() {
 
               {/* Evidences */}
               <div>
-                <h3 className="mb-2 text-[11px] font-bold">Minh chứng đính kèm ({detail.evidences.length})</h3>
+                <h3 className="mb-2 text-[11px] font-bold">
+                  Minh chứng đính kèm ({detail.evidences.length})
+                </h3>
                 {detail.evidences.length === 0 ? (
-                  <p className="text-[10px] text-slate-400">Chưa có minh chứng.</p>
+                  <p className="text-[10px] text-slate-400">
+                    Chưa có minh chứng.
+                  </p>
                 ) : (
                   <ul className="space-y-1 text-[10px]">
                     {detail.evidences.map((e) => (
-                      <li key={e.id} className="flex items-center gap-2 rounded-lg border border-slate-100 p-2">
+                      <li
+                        key={e.id}
+                        className="flex items-center gap-2 rounded-lg border border-slate-100 p-2"
+                      >
                         <FileText size={11} className="text-indigo-500" />
                         <span className="font-semibold">{e.title}</span>
-                        <span className="text-slate-400">({e.evidenceType})</span>
+                        <span className="text-slate-400">
+                          ({e.evidenceType})
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -257,7 +334,8 @@ export default function AdminVerifications() {
                       onClick={() => setDecisionMode("approve")}
                       className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-[10px] font-bold text-white"
                     >
-                      <Check size={12} className="mr-1 inline" />Duyệt toàn bộ
+                      <Check size={12} className="mr-1 inline" />
+                      Duyệt toàn bộ
                     </button>
                     <button
                       type="button"
@@ -278,7 +356,8 @@ export default function AdminVerifications() {
                       onClick={() => setDecisionMode("reject")}
                       className="rounded-lg border border-rose-300 px-4 py-2 text-[10px] font-bold text-rose-600"
                     >
-                      <X size={12} className="mr-1 inline" />Từ chối
+                      <X size={12} className="mr-1 inline" />
+                      Từ chối
                     </button>
                   </div>
                 ) : (
@@ -286,7 +365,8 @@ export default function AdminVerifications() {
                     <p className="text-[10px] font-bold">
                       {decisionMode === "approve" && "Duyệt toàn bộ hồ sơ"}
                       {decisionMode === "partial" && "Duyệt một phần hồ sơ"}
-                      {decisionMode === "needs_info" && "Yêu cầu bổ sung thông tin"}
+                      {decisionMode === "needs_info" &&
+                        "Yêu cầu bổ sung thông tin"}
                       {decisionMode === "reject" && "Từ chối hồ sơ"}
                     </p>
                     <textarea
@@ -318,7 +398,11 @@ export default function AdminVerifications() {
                         disabled={decisionMutation.isPending}
                         className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-[10px] font-bold text-white disabled:opacity-50"
                       >
-                        {decisionMutation.isPending ? <Loader2 size={12} className="mx-auto animate-spin" /> : "Xác nhận"}
+                        {decisionMutation.isPending ? (
+                          <Loader2 size={12} className="mx-auto animate-spin" />
+                        ) : (
+                          "Xác nhận"
+                        )}
                       </button>
                     </div>
                   </div>
@@ -326,7 +410,9 @@ export default function AdminVerifications() {
               </div>
             </div>
           ) : (
-            <p className="py-8 text-center text-xs text-red-500">Không tải được chi tiết case.</p>
+            <p className="py-8 text-center text-xs text-red-500">
+              Không tải được chi tiết case.
+            </p>
           )}
         </section>
       </div>

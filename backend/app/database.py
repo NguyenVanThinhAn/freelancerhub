@@ -7,8 +7,11 @@ import os
 # Tất cả các SQLAlchemy Model (users, freelancers, organizations...) bắt buộc phải kế thừa từ Base này
 Base = declarative_base()
 
-# Chuỗi kết nối CSDL
-DB_URL = os.environ.get('DB_URL', "sqlite:///./freelancerhub.db")
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+default_db_path = os.path.join(BASE_DIR, "freelancerhub.db")
+DB_URL = os.environ.get('DB_URL', f"sqlite:///{default_db_path}")
 
 engine = create_engine(DB_URL, connect_args={"check_same_thread": False} if "sqlite" in DB_URL else {})
 

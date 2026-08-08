@@ -55,8 +55,8 @@ def login_user(db: Session, email: str, password: str):
         db.add(user)
         db.commit()
 
-        access_token = create_access_token(user.id, role=user.role.value)
-        refresh_token = create_refresh_token(user.id, role=user.role.value)
+        access_token = create_access_token(user.id, role=user.role.value if hasattr(user.role, 'value') else user.role)
+        refresh_token = create_refresh_token(user.id, role=user.role.value if hasattr(user.role, 'value') else user.role)
         token_hash = hash_token(refresh_token)
 
         db_refresh = RefreshToken(

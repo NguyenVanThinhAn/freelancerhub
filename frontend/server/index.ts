@@ -11,6 +11,24 @@ export function createServer() {
 
   // Middleware
   app.use(cors());
+
+  // Proxy all /api/v1/** requests to FastAPI backend BEFORE body parsers
+  app.use("/api/v1", proxy(API_TARGET, {
+    proxyReqPathResolver: (req) => {
+      return `/api/v1${req.url}`;
+    },
+    proxyErrorHandler: (err, res) => {
+      console.error("[Proxy Error]", err.message);
+      res.status(502).json({
+        status_code: 502,
+        message: "Proxy error: " + err.message,
+        data: null,
+        error: { detail: err.message },
+        timestamp: new Date().toISOString(),
+      });
+    },
+  }));
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -32,22 +50,6 @@ export function createServer() {
 
   app.get("/api/demo", handleDemo);
 
-  // Proxy all /api/v1/** requests to FastAPI backend
-  app.use("/api/v1", proxy(API_TARGET, {
-    proxyReqPathResolver: (req) => {
-      return `/api/v1${req.url}`;
-    },
-    proxyErrorHandler: (err, res) => {
-      console.error("[Proxy Error]", err.message);
-      res.status(502).json({
-        status_code: 502,
-        message: "Proxy error: " + err.message,
-        data: null,
-        error: { detail: err.message },
-        timestamp: new Date().toISOString(),
-      });
-    },
-  }));
 
   return app;
 }

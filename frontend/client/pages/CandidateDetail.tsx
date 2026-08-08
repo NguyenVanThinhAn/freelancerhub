@@ -1,14 +1,213 @@
-import { Check, ChevronRight, FileText, Link2, Mail, MapPin, MessageCircle, Phone, Sparkles, Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Check, ChevronRight, FileText, Link2, Mail, MapPin, MessageCircle, Phone, Sparkles, Star, Loader2 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { BusinessShell } from "@/layout/BusinessShell";
+import { useProposal } from "@/hooks/use-proposals";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const skills = ["Business Analysis", "SQL", "UML", "BRD", "User Story", "Agile/Scrum", "Stakeholder Management", "Power BI"];
-const history = [["01/2022 – nay", "Senior Business Analyst", "Techcombank", "Phân tích nghiệp vụ và vận hành hệ thống Core Banking Upgrade."], ["06/2020 – 12/2021", "Business Analyst", "MISA JSC", "Phân tích yêu cầu và phối hợp triển khai giải pháp ERP."], ["03/2019 – 05/2020", "Junior Business Analyst", "FPT Information System", "Hỗ trợ thu thập yêu cầu, viết tài liệu và kiểm thử hệ thống."]];
-function ScoreBars({ onExplain }: { onExplain: () => void }) {
-  return <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><h2 className="text-xs font-extrabold">AI Matching tổng quan</h2><span className="text-lg font-extrabold text-indigo-600">96<span className="text-[10px] text-slate-400">/100</span></span></div><div className="mt-3 space-y-2.5">{[["Hard skills", "95/100"], ["Kinh nghiệm", "94/100"], ["Domain fit", "97/100"], ["Giao tiếp", "90/100"], ["Salary fit", "96/100"]].map(([label, score]) => <div key={label} className="flex items-center gap-2 text-[9px]"><span className="w-20 text-slate-500">{label}</span><div className="h-1.5 flex-1 rounded-full bg-slate-100"><div className="h-full rounded-full bg-indigo-500" style={{ width: score.split("/")[0] + "%" }} /></div><b className="w-10 text-right text-slate-500">{score}</b></div>)}</div><button onClick={onExplain} className="mt-4 w-full text-right text-[10px] font-bold text-indigo-600">Xem giải thích AI Matching →</button></section>;
+function ScoreBars({ onExplain, matchData }: { onExplain: () => void, matchData?: any }) {
+  // We'll leave the matching UI static or pseudo-random if matchData is missing for now, 
+  // since the user has to click "Xem giải thích AI" to actually trigger explainable matching page.
+  // We could also call useExplainMatch here, but let's keep it simple and just show the link.
+  return (
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-extrabold">AI Matching tổng quan</h2>
+        <span className="text-lg font-extrabold text-indigo-600">
+          ? <span className="text-[10px] text-slate-400">/100</span>
+        </span>
+      </div>
+      <p className="mt-3 text-[10px] text-slate-500">
+        Hệ thống AI chưa phân tích. Vui lòng xem chi tiết đánh giá để biết thêm.
+      </p>
+      <button onClick={onExplain} className="mt-4 w-full text-right text-[10px] font-bold text-indigo-600">
+        Xem giải thích AI Matching →
+      </button>
+    </section>
+  );
 }
 
 export default function CandidateDetail() {
   const navigate = useNavigate();
-  return <BusinessShell active="AI Matching"><div className="mb-3 flex items-center gap-2 text-[10px] text-slate-400"><button onClick={() => navigate("/matching")} className="hover:text-indigo-600">AI Matching</button><ChevronRight size={12} />Senior Business Analyst<ChevronRight size={12} /><span className="font-semibold text-indigo-600">Nguyễn Thu Hà</span></div><section className="mb-5 flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm lg:flex-row lg:items-center"><div className="flex items-center gap-3"><div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-200 to-orange-100 text-lg font-bold text-indigo-700">NH<span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" /></div><div><h1 className="text-sm font-extrabold">Nguyễn Thu Hà <span className="text-indigo-500">✓</span></h1><p className="mt-1 text-[10px] text-slate-500">Senior Business Analyst</p><div className="mt-1 flex flex-wrap gap-3 text-[9px] text-slate-400"><span className="flex items-center gap-1"><MapPin size={10} />Hà Nội, Việt Nam</span><span>◷ 4 năm</span><span><Mail size={10} className="mr-1 inline" />nguyenthuha@gmail.com</span><span><Phone size={10} className="mr-1 inline" />0987 654 321</span></div></div></div><div className="flex flex-wrap items-center gap-2"><div className="relative flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "conic-gradient(#536df5 96%, #e8ebff 0)" }}><div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-white"><b className="text-lg">96</b><span className="text-[8px] text-slate-400">phù hợp</span></div></div><div className="flex flex-col gap-1.5"><button onClick={() => navigate("/interview-scheduler")} className="rounded-lg bg-indigo-600 px-4 py-2 text-[10px] font-bold text-white"><MessageCircle size={12} className="mr-1 inline" />Mời phỏng vấn</button><button type="button" onClick={() => alert("Lưu shortlist — sẽ gọi POST /api/shortlist Sprint 4")} className="rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-bold text-indigo-600"><Star size={12} className="mr-1 inline" />Lưu shortlist</button></div><button type="button" onClick={() => alert("Nhắn tin — chat feature Sprint 4 (sẽ link với /messages)")} className="rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-bold text-slate-600"><MessageCircle size={12} className="mr-1 inline" />Nhắn tin</button></div></section><div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]"><div className="space-y-4"><section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><h2 className="text-xs font-extrabold">Tóm tắt hồ sơ</h2><p className="mt-3 text-[10px] leading-5 text-slate-500">Senior Business Analyst với hơn 4 năm kinh nghiệm trong phân tích nghiệp vụ, thu thập yêu cầu và xây dựng giải pháp cho các hệ thống tài chính ngân hàng. Có khả năng giao tiếp tốt, làm việc với nhiều bên liên quan và phối hợp hiệu quả với đội ngũ phát triển.</p></section><section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><h2 className="text-xs font-extrabold">Kỹ năng nổi bật</h2><div className="mt-3 flex flex-wrap gap-1.5">{skills.map((skill) => <span key={skill} className="rounded-md bg-indigo-50 px-2 py-1 text-[9px] font-semibold text-indigo-700">{skill}</span>)}</div></section><section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><h2 className="text-xs font-extrabold">Kinh nghiệm làm việc</h2><div className="mt-4 space-y-4">{history.map(([date, role, company, detail]) => <div key={date} className="relative flex gap-3 border-l border-indigo-100 pl-4"><span className="absolute -left-[5px] top-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-indigo-500" /><div className="w-24 shrink-0 text-[9px] text-slate-400">{date}</div><div><p className="text-[10px] font-bold">{role} <span className="font-normal text-slate-400">· {company}</span></p><p className="mt-1 text-[9px] leading-4 text-slate-500">{detail}</p></div></div>)}</div></section><section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><h2 className="text-xs font-extrabold">Dự án tiêu biểu</h2><div className="mt-3 grid gap-3 md:grid-cols-3">{[["Core Banking Upgrade", "Techcombank", "Phân tích và triển khai nâng cấp hệ thống Core Banking."], ["ERP – Finance & HRM", "MISA", "Thu thập yêu cầu và phối hợp tích hợp quy trình."], ["Digital Transformation", "FPT IS", "Tự động hóa quy trình và xây dựng dashboard." ]].map(([title, company, detail]) => <div key={title} className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-bold">{title}</p><p className="mt-1 text-[9px] font-semibold text-indigo-600">{company}</p><p className="mt-2 text-[9px] leading-4 text-slate-500">{detail}</p></div>)}</div></section><section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><div className="grid gap-4 sm:grid-cols-2"><div><h2 className="text-xs font-extrabold">Học vấn & chứng chỉ</h2><p className="mt-3 text-[10px] font-semibold">Đại học Kinh tế Quốc dân</p><p className="text-[9px] text-slate-400">Cử nhân · Hệ thống thông tin quản lý</p></div><div><h2 className="text-xs font-extrabold">Chứng chỉ chuyên môn</h2><div className="mt-3 flex flex-wrap gap-1.5"><span className="rounded bg-indigo-50 px-2 py-1 text-[9px] text-indigo-700">CBAP – PMI-PBA</span><span className="rounded bg-indigo-50 px-2 py-1 text-[9px] text-indigo-700">Agile Analysis Foundation</span></div></div></div></section></div><aside className="space-y-4"><ScoreBars onExplain={() => navigate("/explainable-matching")} /><section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><h2 className="text-xs font-extrabold">Trust Passport</h2><div className="mt-3 space-y-3 text-[9px]">{[["CV đã xác thực", "Xác thực 24/04/2024"], ["Kinh nghiệm xác minh", "Đã làm việc tại công ty"], ["Portfolio đã có", "Đã xác minh"], ["Phản hồi của khách", "Tỷ lệ phản hồi 90%"]].map(([label, detail]) => <div key={label} className="flex gap-2"><Check size={13} className="text-emerald-500" /><div><p className="font-bold">{label}</p><p className="text-slate-400">{detail}</p></div></div>)}</div></section><section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"><h2 className="text-xs font-extrabold">Tài liệu ứng viên</h2><div className="mt-3 space-y-2">{["CV_NguyenThuHa.pdf", "Portfolio – Case Studies", "LinkedIn Profile"].map((doc) => <div key={doc} className="flex items-center gap-2 rounded-lg bg-slate-50 p-2"><FileText size={13} className="text-indigo-500" /><span className="flex-1 text-[9px] font-semibold">{doc}</span><Link2 size={11} className="text-slate-400" /></div>)}</div></section><section className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4"><h2 className="text-xs font-extrabold">Nhận xét của AI</h2><div className="mt-3 space-y-3 text-[9px] text-slate-600"><p><Sparkles size={12} className="mr-1 inline text-indigo-500" /><b>Điểm mạnh:</b> Kinh nghiệm BA vững trong lĩnh vực ngân hàng và khả năng phân tích tốt.</p><p><Sparkles size={12} className="mr-1 inline text-indigo-500" /><b>Đề xuất:</b> Có thể mời phỏng vấn để đánh giá thêm kỹ năng giao tiếp.</p></div></section></aside></div></BusinessShell>;
+  const { id } = useParams<{ id: string }>();
+  const { data: proposal, isLoading, error } = useProposal(id);
+
+  if (isLoading) {
+    return (
+      <BusinessShell active="AI Matching">
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        <div className="mt-4 grid gap-5 xl:grid-cols-[1fr_300px]">
+          <Skeleton className="h-64 rounded-2xl" />
+          <Skeleton className="h-64 rounded-2xl" />
+        </div>
+      </BusinessShell>
+    );
+  }
+
+  if (error || !proposal || !proposal.freelancer) {
+    return (
+      <BusinessShell active="AI Matching">
+        <div className="py-12 text-center">
+          <p className="text-xs text-red-500">Không tải được thông tin ứng viên. Vui lòng thử lại.</p>
+          <button
+            type="button"
+            onClick={() => navigate("/matching")}
+            className="mt-3 rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-bold text-slate-600"
+          >
+            Quay lại
+          </button>
+        </div>
+      </BusinessShell>
+    );
+  }
+
+  const freelancer = proposal.freelancer;
+  const skills = freelancer.skills?.map(s => s.name) || [];
+  
+  // Parse history if available
+  const history = freelancer.parsed_cv_json?.work_history || [];
+  const education = freelancer.parsed_cv_json?.education || [];
+
+  return (
+    <BusinessShell active="AI Matching">
+      <div className="mb-3 flex items-center gap-2 text-[10px] text-slate-400">
+        <button onClick={() => navigate("/matching")} className="hover:text-indigo-600">
+          AI Matching
+        </button>
+        <ChevronRight size={12} />
+        {freelancer.headline || "Ứng viên"}
+        <ChevronRight size={12} />
+        <span className="font-semibold text-indigo-600">{freelancer.display_name}</span>
+      </div>
+
+      <section className="mb-5 flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-200 to-orange-100 text-lg font-bold text-indigo-700">
+            {freelancer.display_name.slice(0, 2).toUpperCase()}
+            <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold">
+              {freelancer.display_name} <span className="text-indigo-500">✓</span>
+            </h1>
+            <p className="mt-1 text-[10px] text-slate-500">{freelancer.headline || "Chưa có chức danh"}</p>
+            <div className="mt-1 flex flex-wrap gap-3 text-[9px] text-slate-400">
+              <span>◷ {freelancer.experience_years ?? 0} năm</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+            <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-white">
+              <b className="text-lg text-slate-400">?</b>
+              <span className="text-[8px] text-slate-400">phù hợp</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <button
+              onClick={() => navigate(`/interview-scheduler/${id}`)}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-[10px] font-bold text-white"
+            >
+              <MessageCircle size={12} className="mr-1 inline" />
+              Mời phỏng vấn
+            </button>
+            <button
+              type="button"
+              onClick={() => alert("Lưu shortlist — đang xây dựng")}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-bold text-indigo-600"
+            >
+              <Star size={12} className="mr-1 inline" />
+              Lưu shortlist
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="space-y-4">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <h2 className="text-xs font-extrabold">Tóm tắt hồ sơ</h2>
+            <p className="mt-3 text-[10px] leading-5 text-slate-500">
+              {freelancer.bio || "Ứng viên chưa cung cấp tóm tắt hồ sơ."}
+            </p>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <h2 className="text-xs font-extrabold">Kỹ năng nổi bật</h2>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {skills.length > 0 ? (
+                skills.map((skill: string) => (
+                  <span
+                    key={skill}
+                    className="rounded-md bg-indigo-50 px-2 py-1 text-[9px] font-semibold text-indigo-700"
+                  >
+                    {skill}
+                  </span>
+                ))
+              ) : (
+                <span className="text-[10px] text-slate-400">Chưa có kỹ năng.</span>
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <h2 className="text-xs font-extrabold">Kinh nghiệm làm việc</h2>
+            <div className="mt-4 space-y-4">
+              {history.length > 0 ? (
+                history.map((h: any, index: number) => (
+                  <div key={index} className="relative flex gap-3 border-l border-indigo-100 pl-4">
+                    <span className="absolute -left-[5px] top-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-indigo-500" />
+                    <div className="w-24 shrink-0 text-[9px] text-slate-400">
+                      {h.start_date || "?"} – {h.end_date || "nay"}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold">
+                        {h.title} <span className="font-normal text-slate-400">· {h.company}</span>
+                      </p>
+                      <p className="mt-1 text-[9px] leading-4 text-slate-500">{h.description}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-[10px] text-slate-400">Không có thông tin kinh nghiệm.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <h2 className="text-xs font-extrabold">Học vấn & chứng chỉ</h2>
+                {education.length > 0 ? (
+                  education.map((e: any, index: number) => (
+                    <div key={index} className="mt-3">
+                      <p className="text-[10px] font-semibold">{e.institution}</p>
+                      <p className="text-[9px] text-slate-400">{e.degree}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="mt-3 text-[10px] text-slate-400">Chưa cập nhật.</p>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside className="space-y-4">
+          <ScoreBars onExplain={() => navigate(`/explainable-matching/${proposal.id}`)} />
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <h2 className="text-xs font-extrabold">Tài liệu ứng viên</h2>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2 rounded-lg bg-slate-50 p-2">
+                <FileText size={13} className="text-indigo-500" />
+                <span className="flex-1 text-[9px] font-semibold">CV_Parsed_Data.json</span>
+                <Link2 size={11} className="text-slate-400" />
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </BusinessShell>
+  );
 }

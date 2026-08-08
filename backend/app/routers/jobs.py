@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
-from app.schemas.jobs import JobCreate, JobUpdate, JobOut, JobListOut, JobSearchQuery, JobPaymentTypeEnum, JobStatusEnum
+from app.schemas.jobs import JobCreate, JobUpdate, JobOut, JobListOut, JobSearchQuery, JobPaymentTypeEnum, JobStatusEnum, JobGenerateJDRequest
 from app.schemas.categories import CategoryCreate, CategoryOut
 from app.schemas.default import BaseResponse
 from app.core.dependencies import get_current_user
@@ -10,9 +10,61 @@ from app.models.users import User
 from app.models.organizations import Organization
 from app.models.jobs import Job, JobStatus, JobPaymentType
 from app.models.categories import Category
+from app.models.skills import Skill
 from app.services import jobs as job_service
+from app.services.ai_jd_engine import generate_jd_content
 
 router = APIRouter()
+
+
+@router.post('/jobs/generate-jd')
+def generate_jd(
+    request: Request,
+    payload: JobGenerateJDRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Lấy category name
+    category_name = ""
+    if payload.category_id:
+        category = db.query(Category).filter(Category.id == payload.category_id).first()
+        if category:
+            category_name = category.name
+
+    # Lấy skill names
+    skill_names = []
+    if payload.skill_ids:
+        skills = db.query(Skill).filter(Skill.id.in_(payload.skill_ids)).all()
+        skill_names = [s.name for s in skills]
+
+    # Format budget
+    budget = ""
+    if payload.budget_min and payload.budget_max:
+        budget = f"{payload.budget_min:,.0f} - {payload.budget_max:,.0f} VND"
+    elif payload.budget_min:
+        budget = f"Từ {payload.budget_min:,.0f} VND"
+    elif payload.budget_max:
+        budget = f"Đến {payload.budget_max:,.0f} VND"
+
+    payment_type_str = "Giá cố định" if payload.payment_type == JobPaymentTypeEnum.FIXED else "Theo giờ"
+
+    # Gọi AI sinh JD
+    jd_content = generate_jd_content(
+        title=payload.title,
+        description=payload.description,
+        category_name=category_name,
+        payment_type=payment_type_str,
+        budget=budget,
+        skills=skill_names
+    )
+
+    return BaseResponse.create(
+        status_code=status.HTTP_200_OK,
+        message='Tạo JD bằng AI thành công',
+        data={"jd_content": jd_content},
+        error=None,
+        path=request.url.path
+    )
 
 
 @router.get('/categories')

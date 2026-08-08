@@ -1,7 +1,11 @@
 import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useProposal } from "@/hooks/use-proposals";
+import { toast } from "sonner";
+import { apiPost } from "@/api/client";
 import { CalendarDays, Check, ChevronLeft, ChevronRight, FileText, Pencil, Plus, ShieldCheck, Trash2, Loader2 } from "lucide-react";
 import { BusinessShell } from "@/layout/BusinessShell";
-import { useCreateMilestone, useMyContracts, MILESTONE_STATUS_LABELS, MILESTONE_STATUS_TONE, formatCurrency } from "@/hooks/use-contracts";
+import { useCreateContract, useMyContracts, MILESTONE_STATUS_LABELS, MILESTONE_STATUS_TONE, formatCurrency } from "@/hooks/use-contracts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const STEPS = [
@@ -60,6 +64,12 @@ function ContractMilestoneStepper({ currentStep, onStepChange }: { currentStep: 
 }
 
 export default function ContractMilestone() {
+  const [searchParams] = useSearchParams();
+  const proposalId = searchParams.get("proposalId");
+  const { data: proposal, isLoading: proposalLoading } = useProposal(proposalId ?? undefined);
+  const navigate = useNavigate();
+  const createContract = useCreateContract();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [terms, setTerms] = useState({
     paymentTerms: "Thanh toán trong vòng 7 ngày sau khi milestone được nghiệm thu.",
@@ -148,12 +158,12 @@ export default function ContractMilestone() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600"><FileText size={17} /></div>
           <div>
             <p className="text-[9px] text-slate-400">Dự án</p>
-            <p className="text-[10px] font-bold">Website thương mại điện tử</p>
+            <p className="text-[10px] font-bold">{proposal ? `Job #${proposal.job_id.slice(0, 8)}` : "Website thương mại điện tử"}</p>
           </div>
         </div>
         <div>
           <p className="text-[9px] text-slate-400">Freelancer</p>
-          <p className="text-[10px] font-bold">Nguyễn Minh Anh</p>
+          <p className="text-[10px] font-bold">{proposal?.freelancer?.display_name || "Nguyễn Minh Anh"}</p>
           <p className="text-[9px] text-amber-500">★ 4.9 (38 đánh giá)</p>
         </div>
         <div>
@@ -174,7 +184,7 @@ export default function ContractMilestone() {
             <h2 className="text-xs font-extrabold">Thông tin dự án</h2>
             <label className="block">
               <span className="mb-1.5 block text-[10px] font-bold text-slate-700">Tên dự án</span>
-              <input defaultValue="Website thương mại điện tử" className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300" />
+              <input value={proposal ? `Job #${proposal.job_id.slice(0, 8)}` : "Website thương mại điện tử"} readOnly className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300" />
             </label>
             <label className="block">
               <span className="mb-1.5 block text-[10px] font-bold text-slate-700">Mô tả ngắn</span>
@@ -189,7 +199,7 @@ export default function ContractMilestone() {
             <h2 className="text-xs font-extrabold">Thông tin freelancer & khách hàng</h2>
             <label className="block">
               <span className="mb-1.5 block text-[10px] font-bold text-slate-700">Freelancer</span>
-              <input defaultValue="Nguyễn Minh Anh" className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300" />
+              <input value={proposal?.freelancer?.display_name || "Nguyễn Minh Anh"} readOnly className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300" />
             </label>
             <label className="block">
               <span className="mb-1.5 block text-[10px] font-bold text-slate-700">Email freelancer</span>
@@ -197,7 +207,7 @@ export default function ContractMilestone() {
             </label>
             <label className="block">
               <span className="mb-1.5 block text-[10px] font-bold text-slate-700">Công ty khách hàng</span>
-              <input defaultValue="Công ty ABC" className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300" />
+              <input defaultValue="Your Organization" className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300" />
             </label>
           </div>
         </section>
@@ -411,7 +421,7 @@ export default function ContractMilestone() {
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-[10px] leading-5 text-slate-700">
               <p className="mb-2 text-[11px] font-extrabold">HỢP ĐỒNG CUNG CẤP DỊCH VỤ</p>
-              <p><b>Bên A (Khách hàng):</b> Công ty ABC</p>
+              <p><b>Bên A (Khách hàng):</b> Your Organization</p>
               <p><b>Bên B (Freelancer):</b> Nguyễn Minh Anh</p>
               <p><b>Dự án:</b> Website thương mại điện tử</p>
               <p><b>Thời gian:</b> 10/06/2024 – 24/07/2024 (45 ngày)</p>
@@ -476,8 +486,44 @@ export default function ContractMilestone() {
               <ChevronRight size={13} className="ml-1 inline" />
             </button>
           ) : (
-            <button type="button" className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-[10px] font-bold text-white shadow-md">
-              <ShieldCheck size={13} />Gửi hợp đồng
+            <button 
+              type="button" 
+              onClick={async () => {
+                if (!proposal) {
+                  toast.error("Không có proposal");
+                  return;
+                }
+                createContract.mutate({
+                  job_id: proposal.job_id,
+                  freelancer_id: proposal.freelancer_id,
+                  total_amount: totalAmount,
+                  proposal_id: proposal.id
+                }, {
+                  onSuccess: async (contract) => {
+                    toast.success("Đang tạo milestone...");
+                    for (let i = 0; i < milestoneList.length; i++) {
+                       const m = milestoneList[i];
+                       try {
+                         await apiPost(`/contracts/${contract.id}/milestones`, {
+                           sequence_no: i + 1,
+                           title: m.title,
+                           description: m.description,
+                           amount: m.amount,
+                           due_at: m.due_date ? new Date(m.due_date.split("/").reverse().join("-")).toISOString() : undefined
+                         });
+                       } catch(err) {
+                         console.error("Lỗi tạo milestone", err);
+                       }
+                    }
+                    navigate(`/workspace/${contract.id}`);
+                  }
+                });
+              }}
+              disabled={createContract.isPending}
+              className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-[10px] font-bold text-white shadow-md disabled:opacity-50"
+            >
+              {createContract.isPending ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+              {createContract.isPending ? "Đang xử lý..." : "Gửi hợp đồng"}
             </button>
           )}
         </div>

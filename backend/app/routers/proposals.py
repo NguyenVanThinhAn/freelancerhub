@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas.proposals import ProposalCreate, ProposalOut, ProposalListOut, ProposalDecision, ProposalStatusEnum
+from app.schemas.proposals import ProposalCreate, ProposalOut, ProposalListOut, ProposalDecision, ProposalStatusEnum, ExplainMatchResponse
 from app.schemas.default import BaseResponse
 from app.core.dependencies import get_current_user
 from app.models.users import User
 from app.models.freelancers import FrelancerProfile
+from app.models.jobs import Job
+from app.models.organizations import Organization
 from app.services import proposals as proposal_service
+from app.services.ai_matching_engine import evaluate_candidate_match
 
 router = APIRouter()
 
@@ -186,3 +189,54 @@ def withdraw_proposal(
         error=None,
         path=request.url.path
     )
+
+
+@router.get('/proposals/{proposal_id}/explain-match')
+def explain_match(
+    request: Request,
+    proposal_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    proposal = proposal_service.get_proposal_by_id(db, proposal_id)
+    if not proposal:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Proposal không tìm thấy')
+
+    job = db.query(Job).filter(Job.id == proposal.job_id).first()
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Job không tìm thấy')
+        
+    freelancer = db.query(FrelancerProfile).filter(FrelancerProfile.user_id == proposal.freelancer_id).first()
+    if not freelancer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Không tìm thấy thông tin freelancer')
+
+    # Get skills
+    job_skills = [s.skill.name for s in job.skills] if job.skills else []
+    freelancer_skills = [s.skill.name for s in freelancer.skills] if freelancer.skills else []
+
+    try:
+        # Call AI matching engine
+        match_data = evaluate_candidate_match(
+            job_title=job.title,
+            job_description=job.description,
+            job_skills=job_skills,
+            candidate_name=freelancer.display_name,
+            candidate_headline=freelancer.headline or "",
+            candidate_bio=freelancer.bio or "",
+            candidate_experience=float(freelancer.experience_years) if freelancer.experience_years else 0,
+            candidate_skills=freelancer_skills,
+            candidate_parsed_cv=freelancer.parsed_cv_json or {}
+        )
+        
+        # Validates and parse the response with Pydantic to ensure safety
+        result = ExplainMatchResponse.model_validate(match_data).model_dump()
+        
+        return BaseResponse.create(
+            status_code=status.HTTP_200_OK,
+            message='Đánh giá độ phù hợp bằng AI thành công',
+            data=result,
+            error=None,
+            path=request.url.path
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'Lỗi từ AI Server: {str(e)}')

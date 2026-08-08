@@ -376,10 +376,10 @@ API_DEBUG=1 npm run dev   # in frontend/
 | # | Hook | File | Endpoint | Backend (FastAPI) | Status |
 |---:|---|---|---|---|:---:|
 | 1 | `useJobs` | `hooks/use-jobs.ts:63` | `GET /jobs` | ⚠️ wired | ✅ live (Index, JobsList) |
-| 2 | `useMyJobs` | `hooks/use-jobs.ts:79` | `GET /jobs/my` | ❌ not wired | — |
-| 3 | `useJob(id)` | `hooks/use-jobs.ts:87` | `GET /jobs/:id` | ❌ not wired | — |
+| 2 | `useMyJobs` | `hooks/use-jobs.ts:79` | `GET /jobs/my` | ⚠️ wired | ✅ live |
+| 3 | `useJob(id)` | `hooks/use-jobs.ts:87` | `GET /jobs/:id` | ⚠️ wired | ✅ live |
 | 4 | `useCategories` | `hooks/use-jobs.ts:96` | `GET /categories` | ⚠️ wired | ✅ live (JobsList) |
-| 5 | `useCreateJob` | `hooks/use-jobs.ts:104` | `POST /jobs` | ❌ not wired | Will fail |
+| 5 | `useCreateJob` | `hooks/use-jobs.ts:104` | `POST /jobs` | ⚠️ wired | ✅ live (CreateJob) |
 | 6 | `useUpdateJob` | `hooks/use-jobs.ts:121` | `PATCH /jobs/:id` | ⚠️ wired | ✅ live (JobsList edit modal) |
 | 7 | `useDeleteJob` | `hooks/use-jobs.ts:138` | `DELETE /jobs/:id` | ⚠️ wired | ✅ live (JobsList delete) |
 | 8 | `useWallet` | `hooks/use-wallet.ts:50` | `GET /wallet` | ⚠️ wired | ✅ live (Index, Wallet) |
@@ -390,7 +390,7 @@ API_DEBUG=1 npm run dev   # in frontend/
 | 13 | `useNotifications` | `hooks/use-notifications.ts:17` | `GET /notifications` | ⚠️ wired | ✅ live (TopBar) |
 | 14 | `useMarkNotificationRead` | `hooks/use-notifications.ts:25` | `PATCH /notifications/:id/read` | ⚠️ wired | ✅ live (TopBar) |
 | 15 | `useOrganizationProfile` | `hooks/use-organization.ts:17` | `GET /organization/profile` | ⚠️ wired | ✅ live (Settings) |
-| 16 | `login()` | `auth/AuthContext.tsx:58` | `POST /auth/login` | ❌ not wired | Will fail (ECONNREFUSED) |
+| 16 | `login()` | `auth/AuthContext.tsx:58` | `POST /auth/login` | ⚠️ wired | ✅ live (Login Page) |
 
 **Pages wired to backend (2026-08-07):**
 - ✅ **Index.tsx** — useJobs (stats + recent jobs table) + useWallet (budget)

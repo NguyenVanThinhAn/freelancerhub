@@ -33,6 +33,7 @@ import AdminVerifications from "./pages/AdminVerifications";
 import Messages from "./pages/Messages";
 import ProposalDetail from "./pages/ProposalDetail";
 import Disputes from "./pages/Disputes";
+import BrowseJobs from "./pages/BrowseJobs";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,7 +57,7 @@ const App = () => (
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise", "admin"]}>
                   <Index />
                 </ProtectedRoute>
               }
@@ -64,7 +65,7 @@ const App = () => (
             <Route
               path="/create-job"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <CreateJob />
                 </ProtectedRoute>
               }
@@ -72,7 +73,7 @@ const App = () => (
             <Route
               path="/ai-processing"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <AIProcessing />
                 </ProtectedRoute>
               }
@@ -80,7 +81,7 @@ const App = () => (
             <Route
               path="/generated-jd"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <GeneratedJD />
                 </ProtectedRoute>
               }
@@ -88,7 +89,7 @@ const App = () => (
             <Route
               path="/content-input"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <ContentInput />
                 </ProtectedRoute>
               }
@@ -96,7 +97,7 @@ const App = () => (
             <Route
               path="/jobs"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <JobsList />
                 </ProtectedRoute>
               }
@@ -104,23 +105,23 @@ const App = () => (
             <Route
               path="/matching"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <Matching />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/candidate-detail"
+              path="/candidate-detail/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <CandidateDetail />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/explainable-matching"
+              path="/explainable-matching/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <ExplainableMatching />
                 </ProtectedRoute>
               }
@@ -128,7 +129,7 @@ const App = () => (
             <Route
               path="/interview-scheduler"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <InterviewScheduler />
                 </ProtectedRoute>
               }
@@ -136,15 +137,23 @@ const App = () => (
             <Route
               path="/contract-milestone"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <ContractMilestone />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workspace/:contractId"
+              element={
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise"]}>
+                  <ProjectWorkspace />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/project-workspace"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise"]}>
                   <ProjectWorkspace />
                 </ProtectedRoute>
               }
@@ -152,7 +161,7 @@ const App = () => (
             <Route
               path="/wallet"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <Wallet />
                 </ProtectedRoute>
               }
@@ -160,7 +169,7 @@ const App = () => (
             <Route
               path="/content-result"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <ContentResult />
                 </ProtectedRoute>
               }
@@ -168,7 +177,7 @@ const App = () => (
             <Route
               path="/settings"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise"]}>
                   <Settings />
                 </ProtectedRoute>
               }
@@ -176,7 +185,7 @@ const App = () => (
             <Route
               path="/freelancer/upload"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer"]}>
                   <CVUploadPage />
                 </ProtectedRoute>
               }
@@ -184,7 +193,7 @@ const App = () => (
             <Route
               path="/freelancer/trust-passport"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer"]}>
                   <TrustPassportPage />
                 </ProtectedRoute>
               }
@@ -192,15 +201,25 @@ const App = () => (
             <Route
               path="/freelancer/verification/evidence/:documentId"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer"]}>
                   <EvidencePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ────── Browse Jobs (cả freelancer + business + admin) ────── */}
+            <Route
+              path="/jobs/browse"
+              element={
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise", "admin"]}>
+                  <BrowseJobs />
                 </ProtectedRoute>
               }
             />
             <Route
               path="/proposals/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
                   <ProposalDetail />
                 </ProtectedRoute>
               }
@@ -208,7 +227,7 @@ const App = () => (
             <Route
               path="/admin/users"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminUsers />
                 </ProtectedRoute>
               }
@@ -216,7 +235,7 @@ const App = () => (
             <Route
               path="/admin/verifications"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminVerifications />
                 </ProtectedRoute>
               }
@@ -224,7 +243,7 @@ const App = () => (
             <Route
               path="/messages"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise", "admin"]}>
                   <Messages />
                 </ProtectedRoute>
               }
@@ -232,7 +251,7 @@ const App = () => (
             <Route
               path="/disputes"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise", "admin"]}>
                   <Disputes />
                 </ProtectedRoute>
               }
@@ -240,7 +259,7 @@ const App = () => (
             <Route
               path="/disputes/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise", "admin"]}>
                   <Disputes />
                 </ProtectedRoute>
               }

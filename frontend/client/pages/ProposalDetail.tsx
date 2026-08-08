@@ -59,7 +59,11 @@ export default function ProposalDetail() {
 
   const handleAccept = () => {
     if (confirm(`Chấp nhận proposal này? Trạng thái job sẽ chuyển sang IN_PROGRESS và các proposals khác sẽ bị từ chối.`)) {
-      accept.mutate(proposal.id);
+      accept.mutate(proposal.id, {
+        onSuccess: () => {
+          navigate(`/contract-milestone?proposalId=${proposal.id}`);
+        }
+      });
     }
   };
 

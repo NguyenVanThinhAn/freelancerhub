@@ -1,4 +1,7 @@
 import time
+from dotenv import load_dotenv
+load_dotenv()
+
 from app.schemas.default import BaseResponse
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -29,8 +32,12 @@ import app.models.contracts
 import app.models.finance
 import app.models.disputes
 import app.models.shortlists
+import app.models.interviews
+import app.models.tasks
 
 from app.routers import users, auth, profiles, communications, admin_system, email_verification, cv_router, admin_cv_router, jobs_router, proposals_router, contracts_router, finance_router, disputes_router, shortlists_router
+from app.routers.interviews import router as interviews_router
+from app.routers.tasks import router as tasks_router
 from app.core.logger import logger
 from datetime import datetime
 
@@ -131,6 +138,8 @@ app.include_router(contracts_router, prefix="/api/v1", tags=["Contracts & Milest
 app.include_router(finance_router, prefix="/api/v1", tags=["Finance & Wallet"])
 app.include_router(disputes_router, prefix="/api/v1", tags=["Disputes"])
 app.include_router(shortlists_router, prefix="/api/v1", tags=["Shortlists"])
+app.include_router(interviews_router, prefix="/api/v1", tags=["Interviews"])
+app.include_router(tasks_router, prefix="/api/v1", tags=["Tasks"])
 
 
 @app.get("/")

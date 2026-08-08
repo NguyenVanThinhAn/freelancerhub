@@ -1,8 +1,24 @@
 import { useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Loader2, Lock, MoreHorizontal, Search, ShieldCheck, Unlock, UserCheck, UserX } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Lock,
+  MoreHorizontal,
+  Search,
+  ShieldCheck,
+  Unlock,
+  UserCheck,
+  UserX,
+} from "lucide-react";
 import { BusinessShell } from "@/layout/BusinessShell";
 import { apiGet, apiPatch } from "@/api/client";
-import { ENDPOINT_ADMIN_USERS, ENDPOINT_ADMIN_USERS_ID_LOCK, ENDPOINT_ADMIN_USERS_UNLOCK } from "@/api/endpoints";
+import {
+  ENDPOINT_ADMIN_USERS,
+  ENDPOINT_ADMIN_USERS_ID_LOCK,
+  ENDPOINT_ADMIN_USERS_UNLOCK,
+} from "@/api/endpoints";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -45,14 +61,19 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
-  const { data: users, isLoading, error } = useQuery({
+  const {
+    data: users,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: () => apiGet<AdminUser[]>(ENDPOINT_ADMIN_USERS),
     staleTime: 30_000,
   });
 
   const lockUser = useMutation({
-    mutationFn: (userId: string) => apiPatch<unknown>(ENDPOINT_ADMIN_USERS_ID_LOCK(userId), {}),
+    mutationFn: (userId: string) =>
+      apiPatch<unknown>(ENDPOINT_ADMIN_USERS_ID_LOCK(userId), {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
       toast.success("Đã khóa tài khoản");
@@ -64,7 +85,8 @@ export default function AdminUsers() {
   });
 
   const unlockUser = useMutation({
-    mutationFn: (userId: string) => apiPatch<unknown>(ENDPOINT_ADMIN_USERS_UNLOCK(userId), {}),
+    mutationFn: (userId: string) =>
+      apiPatch<unknown>(ENDPOINT_ADMIN_USERS_UNLOCK(userId), {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
       toast.success("Đã mở khóa tài khoản");
@@ -77,24 +99,32 @@ export default function AdminUsers() {
 
   const filtered = (users ?? []).filter((u) => {
     if (roleFilter && u.role !== roleFilter) return false;
-    if (search && !u.email.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !u.email.toLowerCase().includes(search.toLowerCase()))
+      return false;
     return true;
   });
 
   const stats = {
     total: users?.length ?? 0,
     active: users?.filter((u) => u.status === "active").length ?? 0,
-    pending: users?.filter((u) => u.status === "pending_verification").length ?? 0,
+    pending:
+      users?.filter((u) => u.status === "pending_verification").length ?? 0,
     locked: users?.filter((u) => u.status === "locked").length ?? 0,
   };
 
   return (
     <BusinessShell active="Admin">
       <div className="mb-5">
-        <p className="mb-1 text-[11px] font-medium text-slate-400">Workspace / Admin</p>
-        <h1 className="text-[24px] font-extrabold tracking-tight">Quản lý người dùng</h1>
+        <p className="mb-1 text-[11px] font-medium text-slate-400">
+          Workspace / Admin
+        </p>
+        <h1 className="text-[24px] font-extrabold tracking-tight">
+          Quản lý người dùng
+        </h1>
         <p className="mt-1 text-xs text-slate-500">
-          Quản lý tài khoản, khóa/mở khóa users. <ShieldCheck size={11} className="inline text-indigo-500" /> Chỉ admin mới truy cập được trang này.
+          Quản lý tài khoản, khóa/mở khóa users.{" "}
+          <ShieldCheck size={11} className="inline text-indigo-500" /> Chỉ admin
+          mới truy cập được trang này.
         </p>
       </div>
 
@@ -106,22 +136,31 @@ export default function AdminUsers() {
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
           <p className="text-[10px] text-slate-400">Đang hoạt động</p>
-          <p className="mt-1 text-xl font-extrabold text-emerald-600">{stats.active}</p>
+          <p className="mt-1 text-xl font-extrabold text-emerald-600">
+            {stats.active}
+          </p>
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
           <p className="text-[10px] text-slate-400">Chờ xác thực</p>
-          <p className="mt-1 text-xl font-extrabold text-amber-600">{stats.pending}</p>
+          <p className="mt-1 text-xl font-extrabold text-amber-600">
+            {stats.pending}
+          </p>
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
           <p className="text-[10px] text-slate-400">Bị khóa</p>
-          <p className="mt-1 text-xl font-extrabold text-rose-600">{stats.locked}</p>
+          <p className="mt-1 text-xl font-extrabold text-rose-600">
+            {stats.locked}
+          </p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="mb-4 flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-2 sm:flex-row">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
           <input
             placeholder="Tìm theo email..."
             value={search}
@@ -161,7 +200,9 @@ export default function AdminUsers() {
             Bạn không có quyền truy cập trang này (yêu cầu role admin).
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-8 text-center text-xs text-slate-400">Không tìm thấy user.</div>
+          <div className="py-8 text-center text-xs text-slate-400">
+            Không tìm thấy user.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px] text-left">
@@ -177,23 +218,34 @@ export default function AdminUsers() {
               </thead>
               <tbody>
                 {filtered.map((u) => (
-                  <tr key={u.id} className="border-b border-slate-50 text-[10px] last:border-0">
+                  <tr
+                    key={u.id}
+                    className="border-b border-slate-50 text-[10px] last:border-0"
+                  >
                     <td className="py-3">
                       <p className="font-bold text-slate-700">{u.email}</p>
-                      <p className="text-[8px] text-slate-400">{u.id.slice(0, 8)}…</p>
+                      <p className="text-[8px] text-slate-400">
+                        {u.id.slice(0, 8)}…
+                      </p>
                     </td>
                     <td>
-                      <span className={`rounded-full px-2 py-1 text-[8px] font-semibold ${ROLE_TONE[u.role] ?? "bg-slate-100 text-slate-500"}`}>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[8px] font-semibold ${ROLE_TONE[u.role] ?? "bg-slate-100 text-slate-500"}`}
+                      >
                         {u.role}
                       </span>
                     </td>
                     <td>
-                      <span className={`rounded-full px-2 py-1 text-[8px] font-semibold ${STATUS_TONE[u.status] ?? "bg-slate-100 text-slate-500"}`}>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[8px] font-semibold ${STATUS_TONE[u.status] ?? "bg-slate-100 text-slate-500"}`}
+                      >
                         {STATUS_LABEL[u.status] ?? u.status}
                       </span>
                     </td>
                     <td className="text-slate-500">
-                      {u.last_login_at ? new Date(u.last_login_at).toLocaleString("vi-VN") : "—"}
+                      {u.last_login_at
+                        ? new Date(u.last_login_at).toLocaleString("vi-VN")
+                        : "—"}
                     </td>
                     <td className="text-slate-500">{u.failed_login_count}</td>
                     <td>

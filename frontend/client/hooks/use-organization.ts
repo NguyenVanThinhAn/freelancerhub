@@ -14,10 +14,11 @@ export interface OrganizationProfile {
   logo_url?: string;
 }
 
-export function useOrganizationProfile() {
+export function useOrganizationProfile(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [QK_ORGANIZATION_PROFILE],
     queryFn: () => apiGet<OrganizationProfile>(ENDPOINT_ORGANIZATION_PROFILE),
     staleTime: 5 * 60_000,
+    enabled: options?.enabled,
   });
 }

@@ -101,3 +101,13 @@ class JobSearchQuery(BaseModel):
     status: Optional[JobStatusEnum] = JobStatusEnum.OPEN
     page: int = 1
     page_size: int = 20
+
+
+class JobGenerateJDRequest(BaseModel):
+    title: str
+    description: str
+    category_id: Optional[str] = None
+    budget_min: Optional[float] = None
+    budget_max: Optional[float] = None
+    payment_type: Optional[JobPaymentTypeEnum] = None
+    skill_ids: Optional[List[str]] = []

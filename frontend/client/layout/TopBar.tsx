@@ -1,7 +1,9 @@
-import { Bell, ChevronDown, Menu, Search } from "lucide-react";
+import { Bell, ChevronDown, Menu, Search, LogOut, User as UserIcon } from "lucide-react";
 import logoIcon from "@/assets/icon_w.png";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useOrganizationProfile } from "@/hooks/use-organization";
+import { useState, useRef, useEffect } from "react";
+import { useAuth } from "@/auth/AuthContext";
 
 export interface TopBarProps {
   onOpenSidebar: () => void;
@@ -9,10 +11,33 @@ export interface TopBarProps {
 }
 
 export function TopBar({ onOpenSidebar, searchPlaceholder = "Tìm kiếm ứng viên, kỹ năng, tin tuyển dụng..." }: TopBarProps) {
+  const { user, logout } = useAuth();
+  const userRole = (user as any)?.role || "freelancer";
+  const isBusiness = userRole === "business" || userRole === "enterprise";
+
   const { data: notifications } = useNotifications();
-  const { data: orgProfile } = useOrganizationProfile();
+  const { data: orgProfile } = useOrganizationProfile({ enabled: isBusiness });
+  
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const unreadCount = notifications?.filter((n) => !n.is_read).length ?? 0;
-  const orgName = orgProfile?.name ?? "Công ty ABC";
+  
+  const displayName = isBusiness
+    ? (orgProfile?.name ?? "Doanh nghiệp") 
+    : (user as any)?.email?.split("@")[0] ?? "Freelancer";
+  
+  const roleLabel = userRole === "admin" ? "Admin" : userRole === "business" || userRole === "enterprise" ? "Enterprise" : "Freelancer";
 
   return (
     <header className="flex h-[72px] items-center justify-between border-b border-slate-200/80 bg-white px-4 sm:px-7">
@@ -40,15 +65,30 @@ export function TopBar({ onOpenSidebar, searchPlaceholder = "Tìm kiếm ứng v
           )}
         </button>
         <div className="hidden h-7 w-px bg-slate-200 sm:block" />
-        <div className="flex items-center gap-2">
+        <div className="relative flex items-center gap-2 cursor-pointer" onClick={() => setDropdownOpen(!dropdownOpen)} ref={dropdownRef}>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
-            {orgName.slice(0, 2).toUpperCase()}
+            {displayName.slice(0, 2).toUpperCase()}
           </div>
           <div className="hidden leading-tight sm:block">
-            <p className="text-[11px] font-bold text-slate-800">{orgName}</p>
-            <p className="text-[10px] text-slate-400">Enterprise</p>
+            <p className="text-[11px] font-bold text-slate-800">{displayName}</p>
+            <p className="text-[10px] text-slate-400">{roleLabel}</p>
           </div>
           <ChevronDown size={14} className="text-slate-400" />
+          
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-50">
+              <button className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 transition">
+                <UserIcon size={16} /> Hồ sơ cá nhân
+              </button>
+              <div className="my-1 h-px bg-slate-100" />
+              <button 
+                onClick={(e) => { e.stopPropagation(); logout(); }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-red-600 hover:bg-red-50 transition"
+              >
+                <LogOut size={16} /> Đăng xuất
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -17,7 +17,6 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ProposalSkill {
-  id: string;
   name: string;
 }
 
@@ -26,6 +25,10 @@ export interface ProposalFreelancer {
   display_name: string;
   headline: string | null;
   hourly_rate: number | null;
+  bio?: string | null;
+  experience_years?: number | null;
+  skills?: ProposalSkill[];
+  parsed_cv_json?: any;
 }
 
 export interface ProposalListItem {
@@ -47,6 +50,22 @@ export interface ProposalCreate {
   cover_letter: string;
   bid_amount: number;
   estimated_duration?: number;
+}
+
+export interface MatchFactors {
+  hard_skills: number;
+  experience: number;
+  domain_fit: number;
+  communication: number;
+  salary_fit: number;
+}
+
+export interface ExplainMatchResponse {
+  fit_score: number;
+  factors: MatchFactors;
+  pros: string[];
+  cons: string[];
+  interview_questions: string[];
 }
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
@@ -71,10 +90,20 @@ export function useJobProposals(jobId: string) {
 }
 
 /** Chi tiết 1 proposal */
-export function useProposal(proposalId: string) {
+export function useProposal(proposalId: string | undefined) {
   return useQuery({
     queryKey: ["proposals", proposalId],
-    queryFn: () => apiGet<ProposalDetail>(ENDPOINT_PROPOSALS_ID(proposalId)),
+    queryFn: () => apiGet<ProposalDetail>(ENDPOINT_PROPOSALS_ID(proposalId!)),
+    enabled: !!proposalId,
+    staleTime: 60_000,
+  });
+}
+
+/** Giải thích AI Matching */
+export function useExplainMatch(proposalId: string | undefined) {
+  return useQuery({
+    queryKey: ["proposals", proposalId, "explain-match"],
+    queryFn: () => apiGet<ExplainMatchResponse>(`/proposals/${proposalId}/explain-match`),
     enabled: !!proposalId,
     staleTime: 60_000,
   });

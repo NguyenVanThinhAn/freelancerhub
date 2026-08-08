@@ -116,14 +116,14 @@ export default function Disputes() {
   if (disputeId) {
     if (detailLoading) {
       return (
-        <BusinessShell active="Hợp đồng">
+        <BusinessShell active="Tranh chấp">
           <Skeleton className="h-32 w-full rounded-2xl" />
         </BusinessShell>
       );
     }
     if (!dispute) {
       return (
-        <BusinessShell active="Hợp đồng">
+        <BusinessShell active="Tranh chấp">
           <div className="py-12 text-center">
             <p className="text-xs text-red-500">Không tải được dispute.</p>
           </div>
@@ -131,7 +131,7 @@ export default function Disputes() {
       );
     }
     return (
-      <BusinessShell active="Hợp đồng">
+      <BusinessShell active="Tranh chấp">
         <div className="mb-3 flex items-center gap-2 text-[10px] text-slate-400">
           <button onClick={() => navigate("/disputes")} className="hover:text-indigo-600">Disputes</button>
           <ChevronRight size={12} />
@@ -216,7 +216,7 @@ export default function Disputes() {
   }
 
   return (
-    <BusinessShell active="Hợp đồng">
+    <BusinessShell active="Tranh chấp">
       <div className="mb-5 flex items-center justify-between">
         <div>
           <p className="mb-1 text-[11px] font-medium text-slate-400">Workspace / Tranh chấp</p>

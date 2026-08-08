@@ -126,9 +126,6 @@ export default function JobsList() {
           <button onClick={() => navigate("/create-job")} className="flex w-fit items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-200">
             <Plus size={15} />Tạo tin tuyển dụng
           </button>
-          <button onClick={() => navigate("/content-input")} className="flex w-fit items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-xs font-bold text-indigo-600">
-            <WandSparkles size={14} className="text-indigo-500" />Tạo content bằng AI
-          </button>
         </div>
       </div>
 
@@ -299,11 +296,12 @@ export default function JobsList() {
         </section>
 
         <aside className="space-y-4">
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm opacity-50">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-extrabold">Hiệu quả theo kênh</h2>
               <span className="text-[9px] text-slate-400">30 ngày qua</span>
             </div>
+            <p className="mt-4 text-center italic text-[9px] text-slate-400">Đang sử dụng dữ liệu tĩnh</p>
             <div className="mt-4 space-y-3">
               {[["LinkedIn", "182", "84%"], ["Website công ty", "128", "72%"], ["TopCV", "76", "64%"], ["Facebook", "52", "48%"], ["VietnamWorks", "14", "31%"]].map(([channel, applicants, width], i) => (
                 <div key={channel}>
@@ -320,8 +318,9 @@ export default function JobsList() {
             <button type="button" onClick={() => alert("Xem báo cáo chi tiết kênh — Sprint 4")} className="mt-4 text-[10px] font-bold text-indigo-600">Xem báo cáo chi tiết →</button>
           </section>
 
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm opacity-50">
             <h2 className="text-xs font-extrabold">Gợi ý từ AI</h2>
+            <p className="mt-2 text-center italic text-[9px] text-slate-400">Đang sử dụng dữ liệu tĩnh</p>
             <div className="mt-3 space-y-3">
               {[["Tối ưu tiêu đề", "Tin có CTR thấp hơn trung bình"], ["Gia hạn tin tuyển dụng", "Tin sắp hết hạn trong 3 ngày tới"], ["Nhắc phản hồi ứng viên", "12 ứng viên đang chờ phản hồi"]].map(([title, detail], i) => (
                 <div key={title} className="flex gap-2">

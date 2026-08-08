@@ -26,7 +26,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Người dùng không tồn tại")
 
-    if user.status != UserStatus.active:
+    if user.status not in [UserStatus.active, UserStatus.pending_verification]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Tài khoản không được phép truy cập")
 

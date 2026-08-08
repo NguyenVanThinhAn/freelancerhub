@@ -27,7 +27,11 @@ except Exception:
     except Exception:
         _preferred = ['pbkdf2_sha256']
 
-pwd_context = CryptContext(schemes=_preferred, deprecated='auto')
+pwd_context = CryptContext(
+    schemes=_preferred, 
+    deprecated='auto',
+    bcrypt__truncate_error=False
+)
 
 
 def validate_password_strength(password: str) -> bool:

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { clearAccessToken, setAccessToken, setOnUnauthorized, getAccessToken, getRefreshToken, clearTokens } from "@/api/client";
 import { decodeJwtSub, decodeJwtExp } from "./tokenStorage";
 import { ENDPOINT_AUTH_LOGIN, ENDPOINT_AUTH_REFRESH } from "@/api/endpoints";
@@ -43,12 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [isLoading] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const logout = useCallback(() => {
     clearTokens();
     setUser(null);
+    queryClient.clear();
     navigate("/login");
-  }, [navigate]);
+  }, [navigate, queryClient]);
 
   const refreshAccessToken = useCallback(async (): Promise<boolean> => {
     const refresh = getRefreshToken();

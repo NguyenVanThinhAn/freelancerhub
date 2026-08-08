@@ -5,6 +5,7 @@ import {
   CalendarDays,
   FileText,
   LayoutDashboard,
+  Search,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -21,24 +22,34 @@ export interface NavItem {
   icon: LucideIcon;
   route?: string;
   badge?: string;
-  adminOnly?: boolean;
+  allowedRoles?: string[];
 }
 
 const navItems: NavItem[] = [
-  { label: "Tổng quan", icon: LayoutDashboard, route: "/" },
-  { label: "Tạo JD", icon: FileText, route: "/create-job" },
-  { label: "AI Matching", icon: UsersRound, route: "/matching" },
-  { label: "Explainable AI", icon: Sparkles, route: "/explainable-matching" },
-  { label: "Tin tuyển dụng", icon: BriefcaseBusiness, route: "/jobs" },
-  { label: "Phỏng vấn", icon: CalendarDays, route: "/interview-scheduler" },
-  { label: "Hợp đồng", icon: FileText, route: "/contract-milestone" },
-  { label: "Thanh toán", icon: WalletCards, route: "/wallet" },
-  { label: "Tin nhắn", icon: Activity, route: "/messages" },
-  { label: "Cài đặt", icon: Settings, route: "/settings" },
-  { label: "Upload CV", icon: FileText, route: "/freelancer/upload" },
-  { label: "Hộ chiếu uy tín", icon: Sparkles, route: "/freelancer/trust-passport" },
-  { label: "Admin", icon: ShieldCheck, route: "/admin/users", adminOnly: true },
-  { label: "Duyệt hồ sơ", icon: ShieldCheck, route: "/admin/verifications", adminOnly: true },
+  // ────── Common (cả 3 role) ──────
+  { label: "Tổng quan", icon: LayoutDashboard, route: "/", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
+  { label: "Tin nhắn", icon: Activity, route: "/messages", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
+  { label: "Tranh chấp", icon: ShieldCheck, route: "/disputes", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
+  { label: "Cài đặt", icon: Settings, route: "/settings", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
+  { label: "Tìm việc", icon: Search, route: "/jobs/browse", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
+
+  // ────── Business + Admin ──────
+  { label: "Tạo JD", icon: FileText, route: "/create-job", allowedRoles: ["business", "enterprise", "admin"] },
+  { label: "AI Matching", icon: UsersRound, route: "/matching", allowedRoles: ["business", "enterprise", "admin"] },
+  { label: "Explainable AI", icon: Sparkles, route: "/explainable-matching", allowedRoles: ["business", "enterprise", "admin"] },
+  { label: "Tin tuyển dụng", icon: BriefcaseBusiness, route: "/jobs", allowedRoles: ["business", "enterprise", "admin"] },
+  { label: "Phỏng vấn", icon: CalendarDays, route: "/interview-scheduler", allowedRoles: ["business", "enterprise", "admin"] },
+  { label: "Hợp đồng", icon: FileText, route: "/contract-milestone", allowedRoles: ["business", "enterprise", "admin"] },
+  { label: "Thanh toán", icon: WalletCards, route: "/wallet", allowedRoles: ["business", "enterprise", "admin"] },
+
+  // ────── Freelancer + Admin ──────
+  { label: "Workspace", icon: FileText, route: "/project-workspace", allowedRoles: ["freelancer", "business", "enterprise", "admin"] },
+  { label: "Upload CV", icon: FileText, route: "/freelancer/upload", allowedRoles: ["freelancer", "admin"] },
+  { label: "Hộ chiếu uy tín", icon: Sparkles, route: "/freelancer/trust-passport", allowedRoles: ["freelancer", "admin"] },
+
+  // ────── Admin-only ──────
+  { label: "Quản lý Users", icon: UsersRound, route: "/admin/users", allowedRoles: ["admin"] },
+  { label: "Duyệt hồ sơ", icon: ShieldCheck, route: "/admin/verifications", allowedRoles: ["admin"] },
 ];
 
 export interface AppSidebarProps {
@@ -52,7 +63,7 @@ export interface AppSidebarProps {
 export function AppSidebar({ active, onSelect, onAiClick, open, setOpen }: AppSidebarProps) {
   const { data: quotas } = useQuotas();
   const { user } = useAuth();
-  const isAdmin = (user as { role?: string } | null)?.role === "admin";
+  const userRole = (user as any)?.role || "freelancer";
   const aiQuota = quotas?.find((q) => q.feature === "ai_matching") ?? quotas?.[0];
   const usedPct = aiQuota && aiQuota.limit_count > 0
     ? Math.round((aiQuota.used_count / aiQuota.limit_count) * 100)
@@ -91,7 +102,7 @@ export function AppSidebar({ active, onSelect, onAiClick, open, setOpen }: AppSi
           </p>
           <div className="space-y-1">
             {navItems
-              .filter((item) => !item.adminOnly || isAdmin)
+              .filter((item) => !item.allowedRoles || item.allowedRoles.includes(userRole))
               .map(({ label, icon: Icon, route, badge }) => {
               const selected = active === label;
               const disabled = !route;
@@ -105,7 +116,7 @@ export function AppSidebar({ active, onSelect, onAiClick, open, setOpen }: AppSi
                     onSelect?.({ label, icon: Icon, route });
                     setOpen(false);
                   }}
-                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition ${disabled ? "cursor-not-allowed opacity-40" : selected ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
+                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition active:scale-[0.98] ${disabled ? "cursor-not-allowed opacity-40" : selected ? "bg-indigo-50 text-indigo-700 active:bg-indigo-100" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100"}`}
                 >
                   <Icon size={17} strokeWidth={selected ? 2.3 : 1.8} />
                   <span className="flex-1">{label}</span>

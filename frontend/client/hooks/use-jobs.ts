@@ -108,6 +108,30 @@ export function useCategories() {
   });
 }
 
+export interface JobGenerateJDRequest {
+  title: string;
+  description: string;
+  category_id?: string;
+  budget_min?: number;
+  budget_max?: number;
+  payment_type?: "FIXED" | "HOURLY";
+  skill_ids?: string[];
+}
+
+export function useGenerateJD() {
+  return useMutation({
+    mutationFn: (payload: JobGenerateJDRequest) =>
+      apiPost<{ jd_content: string }>(`${ENDPOINT_JOBS}/generate-jd`, payload),
+    onSuccess: () => {
+      toast.success("AI đã tạo xong JD!");
+    },
+    onError: (err: unknown) => {
+      const e = err as ApiError;
+      toast.error(e.message ?? "Lỗi khi tạo JD bằng AI");
+    },
+  });
+}
+
 export function useCreateJob() {
   const qc = useQueryClient();
   return useMutation({

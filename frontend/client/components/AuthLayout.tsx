@@ -1,8 +1,9 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { User, ShieldAlert, Briefcase } from "lucide-react";
 import registerImage from "@/assets/register.png";
 import iconLogo from "@/assets/icon_w.png";
+import { useAuth } from "@/auth/AuthContext";
 
 interface Benefit {
   icon: React.ElementType;
@@ -18,6 +19,23 @@ interface AuthLayoutProps {
 }
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ title, subtitle, benefits, children }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Sau khi login, "Khám phá" đi đâu tùy role:
+  // - freelancer → /jobs/browse (tìm việc)
+  // - business/enterprise → /jobs (quản lý JD của mình)
+  // - admin → /admin/users
+  // - chưa login → /jobs (sẽ redirect về /login rồi)
+  const browseRoute =
+    user?.role === "freelancer" ? "/jobs/browse"
+    : user?.role === "admin" ? "/admin/users"
+    : "/jobs";
+
+  const handleBrowse = () => {
+    navigate(browseRoute);
+  };
+
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-white">
       {/* Header */}
@@ -40,12 +58,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ title, subtitle, benefit
             >
               Trang chủ
             </Link>
-            <Link
-              to="/jobs"
+            <button
+              type="button"
+              onClick={handleBrowse}
               className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-all shadow-sm"
             >
-              Khám phá
-            </Link>
+              {user?.role === "freelancer" ? "Tìm việc" : "Khám phá"}
+            </button>
           </div>
         </div>
       </header>
