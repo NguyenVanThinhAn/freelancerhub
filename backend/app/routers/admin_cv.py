@@ -77,6 +77,16 @@ def _send_verification_notification(db, case, action, reason, admin_id):
         "reason": reason,
     }
 
+    # Defensive: nếu freelancer user đã bị xóa (orphan case),
+    # FK constraint sẽ fail khi insert. Log + skip để admin decision vẫn thành công.
+    freelancer = db.query(User).filter(User.id == case.freelancer_id).first()
+    if not freelancer:
+        logger.warning(
+            f"Skip notification cho case {case.id}: freelancer {case.freelancer_id} không tồn tại "
+            f"(orphan case — user đã bị xóa). Decision vẫn được lưu."
+        )
+        return
+
     notif = Notification(
         id=str(uuid.uuid4()),
         user_id=case.freelancer_id,
