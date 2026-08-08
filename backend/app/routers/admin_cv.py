@@ -324,6 +324,18 @@ async def make_admin_verification_decision(
                 detail="Khi reason_code=OTHER, trường 'reason' (notes) là BẮT BUỘC để ghi rõ lý do.",
             )
 
+    # 3.5) PARTIALLY_VERIFY bắt buộc có verifiedFieldPaths (chống silent full-verify).
+    if action == VerificationDecisionActionEnum.PARTIALLY_VERIFY:
+        paths = decision_req.verifiedFieldPaths or []
+        if not paths:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Khi action=PARTIALLY_VERIFY, 'verifiedFieldPaths' phải chứa ít nhất 1 field_path. "
+                    "Không được gửi mảng rỗng (sẽ bị hiểu nhầm thành duyệt toàn bộ)."
+                ),
+            )
+
     # 4) Snapshot prior_state TRƯỚC khi mutate (audit log cần)
     prior_state = {"status": case.status.value}
 
@@ -436,7 +448,18 @@ async def make_admin_verification_decision(
     )
     db.add(audit)
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        logger.error(
+            f"DB commit failed cho case {case.id} action={action.value} admin={admin_id}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Không thể lưu quyết định. Vui lòng thử lại.",
+        )
 
     logger.info(
         f"Admin ID={admin_id} đã đưa ra quyết định [{action.value}] "
