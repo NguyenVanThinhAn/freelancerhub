@@ -10,17 +10,35 @@ Base = declarative_base()
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-default_db_path = os.path.join(BASE_DIR, "freelancerhub.db")
-DB_URL = os.environ.get('DB_URL', f"sqlite:///{default_db_path}")
 
-engine = create_engine(DB_URL, connect_args={"check_same_thread": False} if "sqlite" in DB_URL else {})
+# Auto-detect: MySQL via env or fall back to SQLite
+DB_TYPE = os.environ.get("DB_TYPE", "sqlite").lower()
+
+if DB_TYPE == "mysql":
+    DB_URL = os.environ.get("DB_URL_MYSQL")
+    if not DB_URL:
+        raise RuntimeError(
+            "DB_TYPE=mysql nhung DB_URL_MYSQL chua duoc dat. "
+            "Viet vao dev-stack.env: DB_TYPE=mysql DB_URL_MYSQL=mysql+pymysql://..."
+        )
+else:
+    default_db_path = os.path.join(BASE_DIR, "freelancerhub.db")
+    DB_URL = os.environ.get("DB_URL", f"sqlite:///{default_db_path}")
+
+is_sqlite = "sqlite" in DB_URL
+
+engine = create_engine(
+    DB_URL,
+    connect_args={"check_same_thread": False} if is_sqlite else {},
+    pool_pre_ping=True,
+)
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
-    if "sqlite" in DB_URL:
+    if is_sqlite:
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()

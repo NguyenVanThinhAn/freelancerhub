@@ -78,7 +78,10 @@ run_web() {
 run_api() {
   check_backend_deps
   cd "$BACKEND_DIR"
-  API_DEBUG="$API_DEBUG" .venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port "$PORT_API"
+  API_DEBUG="$API_DEBUG" \
+  DB_TYPE="$DB_TYPE" \
+  DB_URL_MYSQL="$DB_URL_MYSQL" \
+  .venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port "$PORT_API"
 }
 
 run_install() {
