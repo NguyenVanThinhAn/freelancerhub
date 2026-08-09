@@ -42,3 +42,12 @@ def require_role(role: str):
             )
         return current_user
     return dependency
+
+
+def require_admin(current_user: User = Depends(get_current_user)):
+    if current_user.role != UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Chỉ admin mới được phép truy cập"
+        )
+    return current_user

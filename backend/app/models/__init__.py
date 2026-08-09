@@ -35,6 +35,7 @@ from .disputes import Dispute, DisputeEvidence, DisputeStatus
 from .shortlists import Shortlist
 from .admin import Role, Permission, RolePermission, ContentReport, ContentReportStatus
 from .ai import MatchResult, AIArtifact, AIQuotaPlan, AIUsageLog
+from .contact_info_exchanges import ContactInfoExchange, ContactPattern, ExchangeStatus
 
 # Update missing from existing imports
 from .users import OAuthAccount

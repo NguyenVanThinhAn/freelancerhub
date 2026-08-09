@@ -34,8 +34,10 @@ import app.models.disputes
 import app.models.shortlists
 import app.models.interviews
 import app.models.tasks
+import app.models.contact_info_exchanges
 
 from app.routers import users, auth, profiles, communications, admin_system, email_verification, cv_router, admin_cv_router, jobs_router, proposals_router, contracts_router, finance_router, disputes_router, shortlists_router
+from app.routers.admin_contact_monitor import router as admin_contact_router
 from app.routers.interviews import router as interviews_router
 from app.routers.tasks import router as tasks_router
 from app.core.logger import logger
@@ -140,6 +142,7 @@ app.include_router(disputes_router, prefix="/api/v1", tags=["Disputes"])
 app.include_router(shortlists_router, prefix="/api/v1", tags=["Shortlists"])
 app.include_router(interviews_router, prefix="/api/v1", tags=["Interviews"])
 app.include_router(tasks_router, prefix="/api/v1", tags=["Tasks"])
+app.include_router(admin_contact_router, prefix="/api/v1", tags=["Admin Contact Monitor"])
 
 
 @app.get("/")

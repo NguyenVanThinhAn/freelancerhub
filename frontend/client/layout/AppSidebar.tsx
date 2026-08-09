@@ -142,6 +142,12 @@ const navItems: NavItem[] = [
     route: "/admin/disputes",
     allowedRoles: ["admin"],
   },
+  {
+    label: "Contact Monitor",
+    icon: ShieldCheck,
+    route: "/admin/contact-monitor",
+    allowedRoles: ["admin"],
+  },
 ];
 
 export interface AppSidebarProps {

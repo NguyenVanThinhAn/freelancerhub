@@ -32,6 +32,7 @@ import { EvidencePage } from "./pages/Evidence";
 import AdminUsers from "./pages/AdminUsers";
 import AdminVerifications from "./pages/AdminVerifications";
 import AdminDisputes from "./pages/AdminDisputes";
+import AdminContactMonitor from "./pages/AdminContactMonitor";
 import Messages from "./pages/Messages";
 import ProposalDetail from "./pages/ProposalDetail";
 import Disputes from "./pages/Disputes";
@@ -255,6 +256,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminDisputes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/contact-monitor"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminContactMonitor />
                 </ProtectedRoute>
               }
             />

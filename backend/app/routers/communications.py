@@ -8,6 +8,7 @@ from app.models.chat_messages import ChatMessage
 from app.models.thread_participants import ThreadParticipant
 from app.models.notifications import Notification
 from app.models.users import User
+from app.services.contact_info_monitor import process_and_log_exchanges
 from app.services.notifications import send_notification
 
 router = APIRouter()
@@ -83,6 +84,13 @@ def send_chat_message(request: Request, thread_id: str, content: dict, current_u
                           sender_id=current_user.id, content_text=message_text)
     db.add(message)
     db.commit()
+    db.refresh(message)
+
+    # Monitor: phát hiện email/phone/social links
+    process_and_log_exchanges(
+        db, thread_id, current_user.id, message.id, message_text
+    )
+
     send_notification(db, current_user.id, 'MESSAGE_RECEIVED',
                       'Bạn có tin nhắn mới', 'Bạn có tin nhắn mới trong cuộc trò chuyện')
     return BaseResponse.create(status_code=status.HTTP_201_CREATED, message='Gửi tin nhắn thành công', data={'message_id': message.id}, error=None, timestamp=None, path=request.url.path)
