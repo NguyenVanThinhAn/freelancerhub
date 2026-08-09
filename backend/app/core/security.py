@@ -15,18 +15,24 @@ JWT_ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRES_MINUTES = 15
 REFRESH_TOKEN_EXPIRES_DAYS = 7
 
-# Use only argon2 — bcrypt 5.x is incompatible with passlib 1.7.4 (detect_wrap_bug fails on 72-byte limit).
-# argon2 has no 72-byte limit and is the strongest KDF available.
+# Prefer stronger KDFs: argon2 > bcrypt > pbkdf2_sha256.
+# bcrypt<4.1 required: passlib 1.7.4 incompatible with bcrypt 5.x.
+# argon2 preferred when available (no 72-byte limit).
 try:
     import argon2 as _argon2  # type: ignore
-    _preferred = ['argon2']
+    _preferred = ['argon2', 'bcrypt', 'pbkdf2_sha256']
 except Exception:
-    raise RuntimeError(
-        "argon2-cffi is required but not installed. "
-        "Run: pip install argon2-cffi"
-    )
+    try:
+        import bcrypt as _bcrypt  # type: ignore
+        _preferred = ['bcrypt', 'pbkdf2_sha256']
+    except Exception:
+        _preferred = ['pbkdf2_sha256']
 
-pwd_context = CryptContext(schemes=_preferred, deprecated='auto')
+pwd_context = CryptContext(
+    schemes=_preferred,
+    deprecated='auto',
+    bcrypt__truncate_error=False
+)
 
 
 def validate_password_strength(password: str) -> bool:
