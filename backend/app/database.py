@@ -56,18 +56,18 @@ def seed_test_accounts():
     try:
         accounts = [
             {
-                "email": "admin@freelancehub.com",
-                "password": "Admin123!",
+                "email": "admin@demo.com",
+                "password": "Admin@123",
                 "role": UserRole.admin,
             },
             {
-                "email": "freelancer@freelancehub.com",
-                "password": "Freelancer123!",
+                "email": "freelancer@example.com",
+                "password": "Freelancer@123",
                 "role": UserRole.freelancer,
             },
             {
-                "email": "business@freelancehub.com",
-                "password": "Business123!",
+                "email": "business@example.com",
+                "password": "Business@123",
                 "role": UserRole.enterprise,
             },
         ]
