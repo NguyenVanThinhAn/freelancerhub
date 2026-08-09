@@ -57,6 +57,16 @@ export const ENDPOINT_DISPUTES = "/disputes";
 export const ENDPOINT_DISPUTES_ID = (id: string) => `/disputes/${id}`;
 export const ENDPOINT_DISPUTES_ID_EVIDENCE = (id: string) => `/disputes/${id}/evidence`;
 export const ENDPOINT_DISPUTES_ID_RESOLVE = (id: string) => `/disputes/${id}/resolve`;
+export const ENDPOINT_ADMIN_DISPUTES = (
+  params: { status?: string; page?: number; limit?: number } = {},
+) => {
+  const qs = new URLSearchParams();
+  if (params.status) qs.set("status_filter", params.status);
+  if (params.page) qs.set("page", String(params.page));
+  if (params.limit) qs.set("limit", String(params.limit));
+  const s = qs.toString();
+  return s ? `/admin/disputes?${s}` : `/admin/disputes`;
+};
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 export const ENDPOINT_NOTIFICATIONS = "/notifications";

@@ -33,8 +33,7 @@ from .contracts import Contract, Milestone, Deliverable, ContractStatus, Milesto
 from .finance import Wallet, Transaction, TransactionType, TransactionStatus
 from .disputes import Dispute, DisputeEvidence, DisputeStatus
 from .shortlists import Shortlist
-from .admin import Role, Permission, RolePermission, UserRole, ContentReport, ContentReportStatus
-from .audit_log import AuditLog, AuditActionEnum
+from .admin import Role, Permission, RolePermission, ContentReport, ContentReportStatus
 from .ai import MatchResult, AIArtifact, AIQuotaPlan, AIUsageLog
 
 # Update missing from existing imports

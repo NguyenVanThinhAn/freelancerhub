@@ -23,6 +23,10 @@ export const QK_WALLET_TRANSACTIONS = "wallet:transactions";
 // ─── Disputes ────────────────────────────────────────────────────────────────
 export const QK_DISPUTE = (id: string) => ["disputes", id];
 
+// ─── Admin Disputes ──────────────────────────────────────────────────────────
+export const QK_ADMIN_DISPUTES = (statusFilter: string, page: number) =>
+  ["admin", "disputes", statusFilter, page];
+
 // ─── Notifications ──────────────────────────────────────────────────────────
 export const QK_NOTIFICATIONS = "notifications";
 

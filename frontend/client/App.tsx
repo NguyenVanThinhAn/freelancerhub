@@ -31,6 +31,7 @@ import { FreelancerProfilePage } from "./pages/FreelancerProfile";
 import { EvidencePage } from "./pages/Evidence";
 import AdminUsers from "./pages/AdminUsers";
 import AdminVerifications from "./pages/AdminVerifications";
+import AdminDisputes from "./pages/AdminDisputes";
 import Messages from "./pages/Messages";
 import ProposalDetail from "./pages/ProposalDetail";
 import Disputes from "./pages/Disputes";
@@ -246,6 +247,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminVerifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/disputes"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminDisputes />
                 </ProtectedRoute>
               }
             />

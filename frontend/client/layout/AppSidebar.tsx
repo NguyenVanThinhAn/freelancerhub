@@ -5,6 +5,7 @@ import {
   CalendarDays,
   FileText,
   LayoutDashboard,
+  Scale,
   Search,
   Settings,
   ShieldCheck,
@@ -27,29 +28,120 @@ export interface NavItem {
 
 const navItems: NavItem[] = [
   // ────── Common (cả 3 role) ──────
-  { label: "Tổng quan", icon: LayoutDashboard, route: "/", allowedRoles: ["freelancer", "business", "enterprise"] },
-  { label: "Tin nhắn", icon: Activity, route: "/messages", allowedRoles: ["freelancer", "business", "enterprise"] },
-  { label: "Tranh chấp", icon: ShieldCheck, route: "/disputes", allowedRoles: ["freelancer", "business", "enterprise"] },
-  { label: "Cài đặt", icon: Settings, route: "/settings", allowedRoles: ["freelancer", "business", "enterprise"] },
-  { label: "Tìm việc", icon: Search, route: "/jobs/browse", allowedRoles: ["freelancer", "business", "enterprise"] },
+  {
+    label: "Tổng quan",
+    icon: LayoutDashboard,
+    route: "/",
+    allowedRoles: ["freelancer", "business", "enterprise"],
+  },
+  {
+    label: "Tin nhắn",
+    icon: Activity,
+    route: "/messages",
+    allowedRoles: ["freelancer", "business", "enterprise"],
+  },
+  {
+    label: "Tranh chấp",
+    icon: ShieldCheck,
+    route: "/disputes",
+    allowedRoles: ["freelancer", "business", "enterprise"],
+  },
+  {
+    label: "Cài đặt",
+    icon: Settings,
+    route: "/settings",
+    allowedRoles: ["freelancer", "business", "enterprise"],
+  },
+  {
+    label: "Tìm việc",
+    icon: Search,
+    route: "/jobs/browse",
+    allowedRoles: ["freelancer", "business", "enterprise"],
+  },
 
   // ────── Business + Enterprise ──────
-  { label: "Tạo JD", icon: FileText, route: "/create-job", allowedRoles: ["business", "enterprise"] },
-  { label: "AI Matching", icon: UsersRound, route: "/matching", allowedRoles: ["business", "enterprise"] },
-  { label: "Explainable AI", icon: Sparkles, route: "/explainable-matching", allowedRoles: ["business", "enterprise"] },
-  { label: "Tin tuyển dụng", icon: BriefcaseBusiness, route: "/jobs", allowedRoles: ["business", "enterprise"] },
-  { label: "Phỏng vấn", icon: CalendarDays, route: "/interview-scheduler", allowedRoles: ["business", "enterprise"] },
-  { label: "Hợp đồng", icon: FileText, route: "/contract-milestone", allowedRoles: ["business", "enterprise"] },
-  { label: "Thanh toán", icon: WalletCards, route: "/wallet", allowedRoles: ["business", "enterprise"] },
+  {
+    label: "Tạo JD",
+    icon: FileText,
+    route: "/create-job",
+    allowedRoles: ["business", "enterprise"],
+  },
+  {
+    label: "AI Matching",
+    icon: UsersRound,
+    route: "/matching",
+    allowedRoles: ["business", "enterprise"],
+  },
+  {
+    label: "Explainable AI",
+    icon: Sparkles,
+    route: "/explainable-matching",
+    allowedRoles: ["business", "enterprise"],
+  },
+  {
+    label: "Tin tuyển dụng",
+    icon: BriefcaseBusiness,
+    route: "/jobs",
+    allowedRoles: ["business", "enterprise"],
+  },
+  {
+    label: "Phỏng vấn",
+    icon: CalendarDays,
+    route: "/interview-scheduler",
+    allowedRoles: ["business", "enterprise"],
+  },
+  {
+    label: "Hợp đồng",
+    icon: FileText,
+    route: "/contract-milestone",
+    allowedRoles: ["business", "enterprise"],
+  },
+  {
+    label: "Thanh toán",
+    icon: WalletCards,
+    route: "/wallet",
+    allowedRoles: ["business", "enterprise"],
+  },
 
   // ────── Freelancer ──────
-  { label: "Workspace", icon: FileText, route: "/project-workspace", allowedRoles: ["freelancer", "business", "enterprise"] },
-  { label: "Upload CV", icon: FileText, route: "/freelancer/upload", allowedRoles: ["freelancer"] },
-  { label: "Hộ chiếu uy tín", icon: Sparkles, route: "/freelancer/trust-passport", allowedRoles: ["freelancer"] },
+  {
+    label: "Workspace",
+    icon: FileText,
+    route: "/project-workspace",
+    allowedRoles: ["freelancer", "business", "enterprise"],
+  },
+  {
+    label: "Upload CV",
+    icon: FileText,
+    route: "/freelancer/upload",
+    allowedRoles: ["freelancer"],
+  },
+  {
+    label: "Hộ chiếu uy tín",
+    icon: Sparkles,
+    route: "/freelancer/trust-passport",
+    allowedRoles: ["freelancer"],
+  },
 
   // ────── Admin-only ──────
-  { label: "Quản lý Users", icon: UsersRound, route: "/admin/users", allowedRoles: ["admin"] },
-  { label: "Duyệt hồ sơ", icon: ShieldCheck, route: "/admin/verifications", allowedRoles: ["admin"] },
+  {
+    label: "Quản lý Users",
+    icon: UsersRound,
+    route: "/admin/users",
+    allowedRoles: ["admin"],
+  },
+  {
+    label: "Duyệt hồ sơ",
+    icon: ShieldCheck,
+    route: "/admin/verifications",
+    allowedRoles: ["admin"],
+  },
+  {
+    label: "Xử lý tranh chấp",
+    icon: Scale,
+    route: "/admin/disputes",
+    allowedRoles: ["admin"],
+  },
 ];
 
 export interface AppSidebarProps {
@@ -60,14 +152,22 @@ export interface AppSidebarProps {
   setOpen: (open: boolean) => void;
 }
 
-export function AppSidebar({ active, onSelect, onAiClick, open, setOpen }: AppSidebarProps) {
+export function AppSidebar({
+  active,
+  onSelect,
+  onAiClick,
+  open,
+  setOpen,
+}: AppSidebarProps) {
   const { data: quotas } = useQuotas();
   const { user } = useAuth();
   const userRole = (user as any)?.role || "freelancer";
-  const aiQuota = quotas?.find((q) => q.feature === "ai_matching") ?? quotas?.[0];
-  const usedPct = aiQuota && aiQuota.limit_count > 0
-    ? Math.round((aiQuota.used_count / aiQuota.limit_count) * 100)
-    : 0;
+  const aiQuota =
+    quotas?.find((q) => q.feature === "ai_matching") ?? quotas?.[0];
+  const usedPct =
+    aiQuota && aiQuota.limit_count > 0
+      ? Math.round((aiQuota.used_count / aiQuota.limit_count) * 100)
+      : 0;
   return (
     <>
       {open && (
@@ -91,7 +191,10 @@ export function AppSidebar({ active, onSelect, onAiClick, open, setOpen }: AppSi
               FreelanceHub <span className="text-indigo-600">AI</span>
             </span>
           </div>
-          <button className="text-slate-400 lg:hidden" onClick={() => setOpen(false)}>
+          <button
+            className="text-slate-400 lg:hidden"
+            onClick={() => setOpen(false)}
+          >
             <X size={18} />
           </button>
         </div>
@@ -102,32 +205,39 @@ export function AppSidebar({ active, onSelect, onAiClick, open, setOpen }: AppSi
           </p>
           <div className="space-y-1">
             {navItems
-              .filter((item) => !item.allowedRoles || item.allowedRoles.includes(userRole))
+              .filter(
+                (item) =>
+                  !item.allowedRoles || item.allowedRoles.includes(userRole),
+              )
               .map(({ label, icon: Icon, route, badge }) => {
-              const selected = active === label;
-              const disabled = !route;
-              return (
-                <button
-                  key={label}
-                  disabled={disabled}
-                  title={disabled ? "Tính năng đang phát triển (Sprint 4)" : undefined}
-                  onClick={() => {
-                    if (disabled) return;
-                    onSelect?.({ label, icon: Icon, route });
-                    setOpen(false);
-                  }}
-                  className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition active:scale-[0.98] ${disabled ? "cursor-not-allowed opacity-40" : selected ? "bg-indigo-50 text-indigo-700 active:bg-indigo-100" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100"}`}
-                >
-                  <Icon size={17} strokeWidth={selected ? 2.3 : 1.8} />
-                  <span className="flex-1">{label}</span>
-                  {badge && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-100 px-1.5 text-[10px] font-bold text-violet-700">
-                      {badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                const selected = active === label;
+                const disabled = !route;
+                return (
+                  <button
+                    key={label}
+                    disabled={disabled}
+                    title={
+                      disabled
+                        ? "Tính năng đang phát triển (Sprint 4)"
+                        : undefined
+                    }
+                    onClick={() => {
+                      if (disabled) return;
+                      onSelect?.({ label, icon: Icon, route });
+                      setOpen(false);
+                    }}
+                    className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition active:scale-[0.98] ${disabled ? "cursor-not-allowed opacity-40" : selected ? "bg-indigo-50 text-indigo-700 active:bg-indigo-100" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100"}`}
+                  >
+                    <Icon size={17} strokeWidth={selected ? 2.3 : 1.8} />
+                    <span className="flex-1">{label}</span>
+                    {badge && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-100 px-1.5 text-[10px] font-bold text-violet-700">
+                        {badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
           </div>
         </nav>
 
@@ -143,7 +253,9 @@ export function AppSidebar({ active, onSelect, onAiClick, open, setOpen }: AppSi
           {aiQuota && (
             <div className="mt-2">
               <div className="flex justify-between text-[9px] text-slate-500">
-                <span>Đã dùng: {aiQuota.used_count}/{aiQuota.limit_count}</span>
+                <span>
+                  Đã dùng: {aiQuota.used_count}/{aiQuota.limit_count}
+                </span>
                 <span>{usedPct}%</span>
               </div>
               <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-white/70">
@@ -154,9 +266,13 @@ export function AppSidebar({ active, onSelect, onAiClick, open, setOpen }: AppSi
               </div>
             </div>
           )}
-<button type="button" onClick={onAiClick} className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-[10px] font-bold text-indigo-600 shadow-sm">
-        Khám phá tính năng AI <ChevronRight size={12} />
-      </button>
+          <button
+            type="button"
+            onClick={onAiClick}
+            className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-[10px] font-bold text-indigo-600 shadow-sm"
+          >
+            Khám phá tính năng AI <ChevronRight size={12} />
+          </button>
         </div>
       </aside>
     </>
