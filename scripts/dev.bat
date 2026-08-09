@@ -24,9 +24,17 @@ if exist "%ROOT_DIR%\scripts\dev-stack.env" (
     )
 )
 
-set "PORT_API=%PORT_API:-=8000%"
-set "PORT_WEB=%PORT_WEB:-=8080%"
-set "API_DEBUG=%API_DEBUG:-=0%"
+rem Default values (khong dung bash syntax %VAR:-=default%)
+if not defined PORT_API  set "PORT_API=8000"
+if not defined PORT_WEB  set "PORT_WEB=8080"
+if not defined API_DEBUG set "API_DEBUG=0"
+if not defined DB_TYPE   set "DB_TYPE=sqlite"
+if not defined DB_URL_MYSQL set "DB_URL_MYSQL="
+if not defined DB_HOST  set "DB_HOST=localhost"
+if not defined DB_PORT  set "DB_PORT=3306"
+if not defined DB_USER  set "DB_USER=root"
+if not defined DB_NAME  set "DB_NAME=freelancerhub"
+if not defined DB_PASSWORD set "DB_PASSWORD="
 
 rem ----- helpers -----------------------------------------------------------
 goto :main
@@ -80,9 +88,6 @@ goto :main
 :run_api
     call :check_backend_deps
     cd /d "%BACKEND_DIR%"
-    set DB_TYPE=%DB_TYPE%
-    set DB_URL_MYSQL=%DB_URL_MYSQL%
-    set API_DEBUG=%API_DEBUG%
     .venv\Scripts\uvicorn main:app --reload --host 0.0.0.0 --port %PORT_API%
     exit /b 0
 
