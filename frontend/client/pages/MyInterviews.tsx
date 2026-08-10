@@ -163,6 +163,7 @@ export default function MyInterviews() {
   const completed = all.filter((i) => i.status === "COMPLETED").length;
 
   const handleUpdate = (id: string, status: InterviewStatusValue, label: string) => {
+    // prompt returns null (Cancel/Escape) or whatever user typed.
     const note = window.prompt(
       status === "DECLINED"
         ? "Lý do từ chối (tuỳ chọn):"
@@ -170,9 +171,9 @@ export default function MyInterviews() {
         ? "Lý do huỷ lịch (tuỳ chọn):"
         : undefined,
     );
-    // cancel prompt = null = decline without note; user pressing Escape = undefined = skip
+    // For DECLINED/CANCELED, if user clicked Cancel on prompt, ask once more to confirm silent action
     if (status === "DECLINED" || status === "CANCELED") {
-      if (note === null && !window.confirm(`Xác nhận ${label.toLowerCase()}?`)) return;
+      if (note === null && !window.confirm(`Xác nhận ${label.toLowerCase()} mà không ghi lý do?`)) return;
     }
     updateStatus.mutate({ id, status, note: note || undefined });
   };
