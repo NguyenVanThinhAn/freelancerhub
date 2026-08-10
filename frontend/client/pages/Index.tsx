@@ -16,7 +16,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { BusinessShell } from "@/layout/BusinessShell";
-import { useJobs } from "@/hooks/use-jobs";
+import { useMyJobs } from "@/hooks/use-jobs";
 import { useWallet, useTransactions } from "@/hooks/use-wallet";
 import aiIllustration from "@/assets/nâng-cấp-trải-nghiệm-tuyển-dụng-với-ai.png";
 
@@ -66,7 +66,7 @@ function formatBudgetRange(min: number | null | undefined, max: number | null | 
 
 function EnterpriseDashboard() {
   const navigate = useNavigate();
-  const { data: jobs, isLoading: jobsLoading } = useJobs({});
+  const { data: jobs, isLoading: jobsLoading } = useMyJobs();
   const { data: wallet, isLoading: walletLoading } = useWallet();
   const { data: transactions } = useTransactions(100);
 

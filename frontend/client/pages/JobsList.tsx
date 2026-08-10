@@ -2,7 +2,7 @@ import { BriefcaseBusiness, Check, ChevronDown, ChevronLeft, ChevronRight, Edit,
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BusinessShell } from "@/layout/BusinessShell";
-import { useJobs, useCategories, useDeleteJob, useUpdateJob } from "@/hooks/use-jobs";
+import { useCategories, useDeleteJob, useMyJobs, useUpdateJob } from "@/hooks/use-jobs";
 import type { JobListItem } from "@/hooks/use-jobs";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,7 +73,13 @@ export default function JobsList() {
     payment_type: paymentFilter || undefined,
   };
 
-  const { data: jobs, isLoading, error } = useJobs(filters);
+  const { data: allJobs, isLoading, error } = useMyJobs();
+  const jobs = allJobs?.filter((j) => {
+    if (filters.status && j.status !== filters.status) return false;
+    if (filters.category_id && j.category_id !== filters.category_id) return false;
+    if (filters.payment_type && j.payment_type !== filters.payment_type) return false;
+    return true;
+  });
   const { data: categories } = useCategories();
   const deleteJob = useDeleteJob();
   const updateJob = useUpdateJob();
