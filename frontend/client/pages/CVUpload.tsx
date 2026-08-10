@@ -104,7 +104,7 @@ export function CVUploadPage() {
   const startParse = useStartParseCV();
   const reviewCV = useReviewCV(documentId ?? "");
   const { data: task } = useParseTask(taskId);
-  const { data: result } = useCVResult(documentId);
+  const { data: result } = useCVResult(documentId, taskId);
 
   const onPick = (f: File | null) => {
     if (!f) return;
@@ -120,23 +120,35 @@ export function CVUploadPage() {
     setPhase("uploading");
     try {
       const res = await upload.mutateAsync(file);
-      setDocumentId(res.documentId);
+      // Defensive: support both unwrapped data and full BaseResponse shape
+      const r = res as unknown as Record<string, unknown>;
+      const data = r.data as Record<string, unknown> | undefined;
+      const docId = r.documentId ?? r.id ?? data?.documentId ?? data?.id;
+      if (!docId) {
+        console.error("[CVUpload] Upload response missing documentId:", res);
+        toast.error("Upload thất bại: không nhận được ID tài liệu");
+        setPhase("idle");
+        return;
+      }
+      setDocumentId(docId as string);
       setPhase("parsing");
-      const t = await startParse.mutateAsync(res.documentId);
+      const t = await startParse.mutateAsync(docId as string);
       setTaskId(t.taskId);
     } catch {
       setPhase("idle");
     }
   };
 
-  // Auto-transition to review when parse succeeds
+  // Auto-transition to review when parse succeeds.
+  // result được đảm bảo có dữ liệu khi task.status === "SUCCEEDED" (hook useCVResult
+  // đã disable fetch cho tới khi task thành công).
   useEffect(() => {
     if (phase === "parsing" && task?.status === "SUCCEEDED" && result) {
       setPhase("review");
     }
   }, [phase, task?.status, result]);
 
-  // Reset decisions when result refreshes (after save)
+  // Reset decisions when result refreshes (after save).
   useEffect(() => {
     if (!result) return;
     setDecisions((prev) => {
@@ -146,7 +158,7 @@ export function CVUploadPage() {
       }
       return next;
     });
-  }, [result?.extractedFields.length]);
+  }, [result?.extractedFields?.length ?? -1]);
 
   const resetAll = () => {
     setPhase("idle");
@@ -883,11 +895,12 @@ function SubmittedState({
         <ShieldCheck size={26} className="text-emerald-600" />
       </motion.div>
       <h2 className="text-[16px] font-extrabold tracking-tight text-slate-900">
-        Đã nộp hồ sơ CV thành công
+        Đã lưu chỉnh sửa CV
       </h2>
       <p className="mx-auto mt-2 max-w-sm text-[11px] leading-relaxed text-slate-500">
-        {result.extractedFields.length} trường thông tin đã được xác nhận. Admin sẽ phê duyệt và
-        cập nhật Trust Passport trong vòng 24-48 giờ.
+        {result.extractedFields.length} trường thông tin đã được xác nhận. Để Admin duyệt và
+        cấp huy hiệu xanh, bạn cần upload minh chứng (bằng cấp, chứng chỉ...) và nộp hồ sơ
+        xác minh.
       </p>
 
       <div className="mx-auto mt-5 grid max-w-md grid-cols-3 gap-2">
@@ -896,7 +909,7 @@ function SubmittedState({
             {result.extractedFields.length}
           </p>
           <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
-            Trường đã gửi
+            Trường đã xác nhận
           </p>
         </div>
         <div className="rounded-xl bg-white p-2.5 shadow-sm">
@@ -918,9 +931,18 @@ function SubmittedState({
       </div>
 
       <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+        {/* Bước tiếp theo: upload minh chứng + nộp hồ sơ để tạo VerificationCase
+            — không có case này thì Admin không thấy hồ sơ của bạn trong
+            /admin/verifications. */}
+        <a
+          href={`/freelancer/verification/evidence/${result.documentId}`}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-[11px] font-bold text-white shadow-sm hover:bg-emerald-700"
+        >
+          <Upload size={12} /> Upload minh chứng & nộp hồ sơ
+        </a>
         <a
           href="/freelancer/trust-passport"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-[11px] font-bold text-white shadow-sm hover:bg-indigo-700"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50"
         >
           <Sparkles size={12} /> Xem Trust Passport
         </a>
