@@ -77,11 +77,11 @@ FREELANCER_PROFILES = [
         'email': 'chat@gmail.com',
         'display_name': 'Phạm Thị Mai',
         'headline': 'UI/UX Designer + Motion Graphics — 3 năm',
-        'bio': 'UI/UX designer 3 năm KN Figma, design system, prototype. Thêm kinh nghiệm motion graphics After Effects, Lottie. Đã ship 15+ brand identity.',
+        'bio': 'UI/UX designer 3 năm KN Figma, Adobe XD, design system, prototype. Thêm kinh nghiệm motion graphics After Effects, Lottie. Đã ship 15+ brand identity.',
         'experience_years': 3.0,
         'hourly_rate': 180000,
         'availability_status': 'available',
-        'skill_names': [],
+        'skill_names': ['Figma', 'Adobe XD', 'Illustrator'],
     },
     {
         'email': 'freelancer@example.com',
@@ -121,8 +121,16 @@ def update_freelancer_profiles(session):
         profile.experience_years = prof_data['experience_years']
         profile.hourly_rate = prof_data['hourly_rate']
         profile.availability_status = prof_data['availability_status']
-        # Recompute profile_completion: name + headline + bio + skills + experience + rate
+
+        # Replace skills first (sync with skill_names), THEN count
+        session.query(FreelancerSkill).filter(FreelancerSkill.freelancer_profile_id == user.id).delete()
+        for sk_name in prof_data['skill_names']:
+            sk_id = skills_by_name.get(sk_name)
+            if sk_id:
+                session.add(FreelancerSkill(freelancer_profile_id=user.id, skill_id=sk_id))
         session.flush()
+
+        # Recompute profile_completion: name + headline + bio + skills + experience + rate
         skill_count = session.query(FreelancerSkill).filter(FreelancerSkill.freelancer_profile_id == user.id).count()
         completion = 30 if profile.display_name else 0
         if profile.headline:
@@ -137,12 +145,6 @@ def update_freelancer_profiles(session):
             completion += 15
         profile.profile_completion = min(100, completion)
 
-        # Replace skills (sync with skill_names)
-        session.query(FreelancerSkill).filter(FreelancerSkill.freelancer_profile_id == user.id).delete()
-        for sk_name in prof_data['skill_names']:
-            sk_id = skills_by_name.get(sk_name)
-            if sk_id:
-                session.add(FreelancerSkill(freelancer_profile_id=user.id, skill_id=sk_id))
         print(f'  + updated {user.email:30s} | "{profile.display_name}" | {profile.headline[:60]}')
 
     session.commit()
