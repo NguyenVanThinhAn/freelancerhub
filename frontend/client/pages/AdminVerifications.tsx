@@ -180,8 +180,15 @@ export default function AdminVerifications() {
         ENDPOINT_ADMIN_VERIFICATIONS_ID_DECISION(selectedCaseId!),
         {
           action: payload.action,
-          reason_code: payload.reason_code,
-          reason: payload.notes,
+          // Backend schema `VerificationDecisionRequest` chỉ có field `reason`
+          // (Text), không có `reason_code` column riêng. Để không làm mất
+          // lý do admin chọn từ dropdown → nhúng reason_code vào đầu chuỗi
+          // `reason` (audit history vẫn đọc được và người duyệt hiểu được).
+          reason: payload.reason_code
+            ? (payload.notes
+                ? `[${payload.reason_code}] ${payload.notes}`
+                : `[${payload.reason_code}]`)
+            : payload.notes,
         },
         true,
         { "Idempotency-Key": payload.idempotencyKey },
