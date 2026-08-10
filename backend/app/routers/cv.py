@@ -375,13 +375,32 @@ async def review_cv_parse_result(
 
     # Chuyển trạng thái CV thành PENDING_VERIFICATION (Đã Review xong, chờ Admin duyệt)
     doc.status = DocumentStatusEnum.PENDING_VERIFICATION
+
+    # Auto tạo (hoặc refresh) VerificationCase để Admin thấy hồ sơ ngay
+    # trong queue /admin/verifications mà không cần freelancer phải sang
+    # thêm bước "Nộp hồ sơ xác minh" ở Evidence page.
+    # (Idempotent — nếu case đã tồn tại thì refresh status PENDING.)
+    case = db.query(VerificationCase).filter(VerificationCase.cv_document_id == document_id).first()
+    if not case:
+        case = VerificationCase(
+            id=str(uuid.uuid4()),
+            cv_document_id=document_id,
+            freelancer_id=doc.freelancer_id,
+            status=VerificationCaseStatusEnum.PENDING,
+            submitted_at=now,
+        )
+        db.add(case)
+    else:
+        case.status = VerificationCaseStatusEnum.PENDING
+        case.submitted_at = now
+
     db.commit()
 
-    logger.info(f"Freelancer đã Review và Cập nhật CV {document_id}. Trạng thái mới: PENDING_VERIFICATION")
+    logger.info(f"Freelancer đã Review và Cập nhật CV {document_id}. Trạng thái mới: PENDING_VERIFICATION. Case ID={case.id}")
     return BaseResponse.create(
         status_code=status.HTTP_200_OK,
         message="Đã cập nhật dữ liệu xác nhận của người dùng thành công.",
-        data={"documentStatus": doc.status.value},
+        data={"documentStatus": doc.status.value, "caseId": case.id},
         error=None,
         path=request.url.path
     )

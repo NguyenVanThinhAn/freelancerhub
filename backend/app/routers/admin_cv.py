@@ -115,6 +115,29 @@ async def get_admin_verification_cases(
     """
     API Dành cho Admin: Lấy danh sách hàng đợi các Hồ sơ Yêu cầu Xác minh (Verification Cases).
     """
+    # Lazy backfill: với các CV đã save review (CV.status = PENDING_VERIFICATION)
+    # nhưng chưa có VerificationCase (vì freelancer chưa sang Evidence page
+    # bấm "Nộp hồ sơ xác minh"), tự động tạo case PENDING để Admin thấy ngay.
+    # Idempotent — chỉ tạo nếu chưa tồn tại.
+    from datetime import datetime as _dt
+    _now = _dt.utcnow()
+    _orphan_docs = db.query(CVDocument).filter(
+        CVDocument.status == DocumentStatusEnum.PENDING_VERIFICATION
+    ).all()
+    for _doc in _orphan_docs:
+        _existing = db.query(VerificationCase).filter(
+            VerificationCase.cv_document_id == _doc.id
+        ).first()
+        if not _existing:
+            db.add(VerificationCase(
+                id=str(uuid.uuid4()),
+                cv_document_id=_doc.id,
+                freelancer_id=_doc.freelancer_id,
+                status=VerificationCaseStatusEnum.PENDING,
+                submitted_at=_now,
+            ))
+    db.commit()
+
     query = db.query(VerificationCase)
     if status_filter:
         query = query.filter(VerificationCase.status == status_filter)
