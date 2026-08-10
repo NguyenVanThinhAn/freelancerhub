@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { toast } from "sonner";
 import { apiFetch, apiGet, apiPost, apiPatch } from "@/api/client";
 import {
@@ -113,10 +114,12 @@ export function useResubmitVerification(documentId: string) {
 // ─── Queries ─────────────────────────────────────────────────────────────────
 
 export function useParseTask(taskId: string | null) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: taskId ? QK_CV_TASK(taskId) : ["cv", "task", "noop"],
     queryFn: () => apiGet<CVParseTaskResponse>(ENDPOINT_CV_TASK(taskId!)),
     enabled: !!taskId,
+    retry: false,
     refetchInterval: (q) => {
       const status = (q.state.data as CVParseTaskResponse | undefined)?.status;
       return status === "SUCCEEDED" || status === "FAILED" ? false : 2000;
@@ -124,12 +127,72 @@ export function useParseTask(taskId: string | null) {
   });
 }
 
-export function useCVResult(documentId: string | null) {
+export function useCVResult(documentId: string | null, taskId: string | null) {
+  const { data: task } = useParseTask(taskId);
+  const startTime = useRef<number>(Date.now());
+  const taskSucceeded = task?.status === "SUCCEEDED";
+
   return useQuery({
     queryKey: documentId ? QK_CV_RESULT(documentId) : ["cv", "result", "noop"],
-    queryFn: () => apiGet<CVParseResultDetailResponse>(ENDPOINT_CV_DOCUMENT_RESULT(documentId!)),
-    enabled: !!documentId,
-    refetchInterval: 3000,
+    // CHỈ fetch khi:
+    //   1. documentId có giá trị
+    //   2. Parse task đã SUCCESS (backend mới save CVParseResult vào DB)
+    // Nếu task chưa SUCCESS → query disabled → không fetch → không có 404 race.
+    // Khi task SUCCESS → enabled = true → fetch 1 lần duy nhất → 200.
+    enabled: !!documentId && taskSucceeded,
+    queryFn: () =>
+      apiGet<CVParseResultDetailResponse>(ENDPOINT_CV_DOCUMENT_RESULT(documentId!)),
+    retry: false,
+    refetchOnWindowFocus: false,
+    // Transform response → typed shape.
+    // Backend trả về camelCase aliases (fieldPath, sourcePage, requiresUserReview, …)
+    // nên mapper PHẢI đọc camelCase. Đọc snake_case sẽ trả về undefined cho mọi field
+    // → toàn bộ fieldPath rỗng → mọi row trùng key trong `decisions` → click 1 nút
+    // "Xác nhận" thì tất cả row đều hiện "Đã xác nhận", và khi lưu backend 500 vì
+    // lookup field_path == "" không match DB row nào.
+    select: (raw): CVParseResultDetailResponse => {
+      const obj = raw as unknown as Record<string, unknown>;
+      const ef = (obj.extractedFields as Record<string, unknown>[] | undefined) ?? [];
+      const fields: CVParseResultDetailResponse["extractedFields"] = ef.map((f) => ({
+        id: String(f.id ?? f.field_id ?? ""),
+        fieldPath: String(f.fieldPath ?? f.field_path ?? ""),
+        value: f.value,
+        confidence: typeof f.confidence === "number" ? f.confidence : null,
+        sourcePage: typeof f.sourcePage === "number" ? f.sourcePage : null,
+        sourceText: f.sourceText != null ? String(f.sourceText) : null,
+        evidenceLevel:
+          (f.evidenceLevel as CVParseResultDetailResponse["extractedFields"][0]["evidenceLevel"]) ??
+          (f.evidence_level as CVParseResultDetailResponse["extractedFields"][0]["evidenceLevel"]) ??
+          "AI_EXTRACTED",
+        requiresUserReview: Boolean(f.requiresUserReview ?? f.requires_user_review ?? false),
+      }));
+      return {
+        documentId: String(obj.documentId ?? obj.document_id ?? ""),
+        overallConfidence:
+          typeof obj.overallConfidence === "number"
+            ? obj.overallConfidence
+            : typeof obj.overall_confidence === "number"
+              ? obj.overall_confidence
+              : null,
+        completenessPercent:
+          typeof obj.completenessPercent === "number"
+            ? obj.completenessPercent
+            : typeof obj.completeness_percent === "number"
+              ? obj.completeness_percent
+              : null,
+        missingFields: Array.isArray(obj.missingFields)
+          ? (obj.missingFields as string[])
+          : Array.isArray(obj.missing_fields)
+            ? (obj.missing_fields as string[])
+            : [],
+        conflicts: Array.isArray(obj.conflicts) ? (obj.conflicts as unknown[]) : [],
+        extractedFields: fields,
+      };
+    },
+    // Fetch 1 lần khi task SUCCESS. Không poll lại — data không đổi trong session.
+    refetchInterval: false,
+    refetchOnMount: false,
+    staleTime: Infinity,
   });
 }
 
