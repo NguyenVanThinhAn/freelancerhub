@@ -104,11 +104,22 @@ def process_cv_parsing_pipeline(task_id: str, db_session_factory):
         db.refresh(parse_result)
 
         # 4.2. Ghi từng trường chi tiết vào cv_extracted_fields
-        for field in normalized_res.get("extracted_fields", []):
+        # NOTE: filter bỏ field_path rỗng và de-duplicate theo (parse_result_id, field_path)
+        # để tránh UNIQUE constraint failed khi AI trả về cùng field_path 2 lần hoặc path rỗng.
+        seen_paths = set()
+        for idx, field in enumerate(normalized_res.get("extracted_fields", [])):
+            raw_path = (field.get("field_path") or "").strip()
+            if not raw_path:
+                logger.warning(f"[Task {task_id}] Bỏ field #{idx} vì field_path rỗng")
+                continue
+            if raw_path in seen_paths:
+                logger.warning(f"[Task {task_id}] Bỏ field #{idx} vì field_path trùng: {raw_path}")
+                continue
+            seen_paths.add(raw_path)
             ext_field = CVExtractedField(
                 cv_parse_result_id=parse_result.id,
-                field_path=field["field_path"],
-                value_json=field["value_json"],
+                field_path=raw_path,
+                value_json=field.get("value_json"),
                 confidence=field.get("confidence", 0.9),
                 source_page=field.get("source_page", 1),
                 source_text=str(field.get("source_text", ""))[:1000],

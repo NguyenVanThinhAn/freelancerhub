@@ -73,7 +73,9 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         timestamp=datetime.now().isoformat(),
         path=request.url.path
     )
-    return JSONResponse(status_code=exc.status_code, content=response_body)
+    # BaseResponse.create returns a Pydantic instance; JSONResponse needs a dict.
+    return JSONResponse(status_code=exc.status_code, content=response_body.model_dump(mode="json"))
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -87,8 +89,8 @@ async def global_exception_handler(request: Request, exc: Exception):
         path=request.url.path
     )
     return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-        content=response_body
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content=response_body.model_dump(mode="json")
     )
 
 # -----------------------------------------------------------------------------
