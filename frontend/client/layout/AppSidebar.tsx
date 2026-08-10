@@ -124,6 +124,12 @@ const navItems: NavItem[] = [
 
   // ────── Freelancer ──────
   {
+    label: "Phỏng vấn của tôi",
+    icon: CalendarDays,
+    route: "/my-interviews",
+    allowedRoles: ["freelancer"],
+  },
+  {
     label: "Workspace",
     icon: FileText,
     route: "/project-workspace",

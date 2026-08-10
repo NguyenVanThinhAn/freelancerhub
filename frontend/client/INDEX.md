@@ -2,7 +2,7 @@
 
 > **Mục đích:** Tra cứu nhanh khi debug navigation, route, sidebar, flow và cross-check với DOCS.
 > **Ngày tạo:** 07/08/2026 01:57 (UTC+7)
-> **Cập nhật lần 12:** 07/08/2026 19:18 (UTC+7) — Thêm §16 API Debug Index, §17 Rule Files, debug logging client.ts + server/index.ts.
+> **Cập nhật lần 15:** 10/08/2026 22:05 (UTC+7) — Thêm interview flow 2 phía (PATCH /interviews/{id}/status, GET /interviews/{id}, MyInterviews page cho freelancer, InterviewScheduler hiển thị 'Lịch đã gửi' thật), seed 6 interviews + cập nhật 5 freelancer với vị trí rõ ràng.
 > **Phạm vi:** `frontend/client/**` (16 page + 3 layout + 1 stepper + 6 hooks + 3 api files + assets)
 > **Liên quan:** `INTEGRATION.md` — kế hoạch nối Frontend ↔ Backend (FastAPI), phân theo Sprint.
 
@@ -246,13 +246,14 @@ Mỗi page có: route, breadcrumb, button handlers, dead-UI, mock data, edge cas
 | **ContentInput** | `ContentInput.tsx` | `/content-input` | ✅ → /content-result | Channel/tone/length buttons (visual only), `Lưu bản nháp`, `Chỉnh sửa` | (none) |
 | **ContentResult** | `ContentResult.tsx` | `/content-result` | ✅ → /content-input (×2) | `Lưu & duyệt` | `copied: boolean` + `socialPost` const + `handleCopy` (navigator.clipboard.writeText) |
 | **JobsList** | `JobsList.tsx` | `/jobs` | ✅ → /create-job | Search filter, dropdown, pagination, `Xuất Excel`, `Xem báo cáo`, `Xem chi tiết` | (none — mock data) |
-| **Matching** | `Matching.tsx` | `/matching` | ✅ eye icon → /candidate-detail (FIXED lần 13, trước đó chỉ i===0) | `MessageCircle`, `MoreHorizontal` per row | (none — 7 mock candidates) |
-| **CandidateDetail** | `CandidateDetail.tsx` | `/candidate-detail` | ✅ → /interview-scheduler, /explainable-matching, /matching | `Lưu shortlist`, `Nhắn tin` | (none — hardcoded Nguyễn Thu Hà) |
-| **ExplainableMatching** | `ExplainableMatching.tsx` | `/explainable-matching` | ✅ → /candidate-detail | `Mời phỏng vấn`, `Lưu shortlist` (in ComparisonHeader) | `active="Explainable AI"` (FIXED lần 5) |
-| **InterviewScheduler** | `InterviewScheduler.tsx` | `/interview-scheduler` | ✅ → /candidate-detail (×3) | interview type/day/platform buttons, `Lưu nháp`, `Gửi lời mời`, `Chỉnh sửa`, `Xem thêm khung giờ` | `time: string` (FIXED lần 13: time→endTime cho 4 slots thay vì chỉ 14:00) |
+| **Matching** | `Matching.tsx` | `/matching` | ✅ → /candidate-detail/:id (Xem chi tiết per candidate), → /explainable-matching/:id (Explainable AI top1), → /interview-scheduler/:id (Mời PV) | (none) | `jobId`, `search` — per-card `useProposal` + `useExplainMatch` (AI fit_score + 5 factors) |
+| **CandidateDetail** | `CandidateDetail.tsx` | `/candidate-detail/:id` | ✅ → /interview-scheduler/:id, /explainable-matching, /matching | `Lưu shortlist` (alert — đang xây dựng) | `useProposal` + `useExplainMatch` → AI fit_score + 5 factors hiển thị trong sidebar |
+| **ExplainableMatching** | `ExplainableMatching.tsx` | `/explainable-matching` | ✅ → /candidate-detail, /interview-scheduler/:id | `Mời phỏng vấn`, `Lưu shortlist` (in ComparisonHeader) | `active="Explainable AI"` (FIXED lần 5) |
+| **InterviewScheduler** | `InterviewScheduler.tsx` | `/interview-scheduler[/:id]` | ✅ → /candidate-detail (×3) | interview type/day/platform buttons, `Lưu nháp`, `Gửi lời mời`, `Chỉnh sửa`, `Xem thêm khung giờ` | `useProposal` + `useCreateInterview` + `useInterviews(id)` — đã có 'Lịch đã gửi' panel ở sidebar hiển thị existing interviews (lần 15) |
 | **ContractMilestone** | `ContractMilestone.tsx` | `/contract-milestone` | ❌ wizard 4-step không có navigation (DEFERRED — cần 3 section content) | `Quay lại`, `Lưu nháp`, `Tạo hợp đồng`, `Thêm milestone`, edit/trash, `Tìm hiểu thêm`, `Nạp tiền` | (none) |
 | **ProjectWorkspace** | `ProjectWorkspace.tsx` | `/project-workspace` | ❌ | `Mở trên Marketplace`, `Tiếp tục làm việc`, `Xem tất cả` (multiple), `Xem chi tiết milestone`, `Xem báo cáo` | Tabs không có state |
 | **Wallet** | `Wallet.tsx` | `/wallet` | ❌ | `Rút tiền`, `Nạp tiền` (multiple), `Xem chi tiết`, `Xem tất cả`, `Xem báo cáo`, `Quản lý`, `Thêm tài khoản` | Tabs không có state |
+| **MyInterviews** | `MyInterviews.tsx` | `/my-interviews` | ❌ | (none — chỉ status update) | `useInterviews` + `useUpdateInterviewStatus` — Confirm/Decline/Cancel cho freelancer (lần 15) |
 | **NotFound** | `NotFound.tsx` | `*` | `<a href="/">` (full reload) | — | (none) |
 
 ### Bug navigation đã fix (qua 13 lần check)
@@ -264,6 +265,14 @@ Mỗi page có: route, breadcrumb, button handlers, dead-UI, mock data, edge cas
 | 3 | Eye icon chỉ navigate i===0 | `Matching.tsx:22` | → `() => navigate("/candidate-detail")` cho mọi i (lần 13) |
 | 4 | "Sao chép" button không thực sự copy | `ContentResult.tsx:72` | extract `socialPost` const + `handleCopy` dùng `navigator.clipboard.writeText` (lần 13) |
 | 5 | `time === "14:00" ? "15:00" : "15:30"` time logic buggy | `InterviewScheduler.tsx` | 4-arm ternary map cho 09:00/10:30/14:00/15:30 (lần 13) |
+| 6 | Matching.tsx navigate `/proposals/${id}` (route không tồn tại → 404) | `Matching.tsx` | → `/candidate-detail/${proposal.id}` (lần 14) |
+| 7 | CandidateDetail.tsx hiển thị `?` placeholder thay vì fit_score AI | `CandidateDetail.tsx` | → gọi `useExplainMatch`, render fit_score + 5 factors (lần 14) |
+| 8 | Matching.tsx không hiển thị fit_score/factors theo docs (match_results) | `Matching.tsx` | → rewrite dạng card-list, mỗi candidate có `useProposal` + `useExplainMatch`, hiển thị fit_score to + 5 mini-bars (lần 14) |
+| 9 | CandidateDetail navigate `/interview-scheduler/${id}` (route không tồn tại → 404) | `CandidateDetail.tsx` | → `/interview-scheduler` (lần 14) |
+| 10 | Backend thiếu `PATCH /interviews/{id}/status` + `GET /interviews/{id}` (freelancer không thể confirm/decline) | `backend/app/routers/interviews.py` | thêm 2 endpoint, role-aware (freelancer → CONFIRMED/DECLINED; business → COMPLETED/CANCELED). Thêm `CONFIRMED`/`DECLINED` vào `InterviewStatus` enum (lần 15) |
+| 11 | Matching/CandidateDetail/ExplainableMatching navigate `/interview-scheduler` không truyền proposal.id → page không load được proposal info | `App.tsx` + 3 page | thêm route `/interview-scheduler/:id`, update navigate để pass `proposal.id` (lần 15) |
+| 12 | InterviewScheduler.tsx không hiển thị lịch đã gửi (mock) | `InterviewScheduler.tsx` | thêm sidebar 'Lịch đã gửi (n)' hiển thị existing interviews thật từ `useInterviews(id)` (lần 15) |
+| 13 | Freelancer không có page xem lịch phỏng vấn của mình | `pages/MyInterviews.tsx` mới | tạo page mới `/my-interviews` cho freelancer, sidebar item 'Phỏng vấn của tôi', Confirm/Decline/Cancel (lần 15) |
 
 ### Bug đã ghi nhận (chưa fix — scope lớn)
 

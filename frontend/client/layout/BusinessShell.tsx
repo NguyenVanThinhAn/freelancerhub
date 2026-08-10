@@ -15,6 +15,7 @@ const DEFAULT_ROUTE: Record<string, string> = {
   "AI Matching": "/matching",
   "Tin tuy\u1ec3n d\u1ee5ng": "/jobs",
   "Ph\u1ecfng v\u1ea5n": "/interview-scheduler",
+  "Ph\u1ecfng v\u1ea5n c\u1ee7a t\u00f4i": "/my-interviews",
   "H\u1ee3p \u0111\u1ed3ng": "/contract-milestone",
   "Thanh to\u00e1n": "/wallet",
 };

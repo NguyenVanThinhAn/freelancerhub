@@ -7,8 +7,10 @@ from app.database import Base
 
 class InterviewStatus(str, enum.Enum):
     SCHEDULED = 'SCHEDULED'
-    COMPLETED = 'COMPLETED'
-    CANCELED = 'CANCELED'
+    CONFIRMED = 'CONFIRMED'       # freelancer đã xác nhận tham dự
+    DECLINED = 'DECLINED'         # freelancer từ chối
+    COMPLETED = 'COMPLETED'       # business đánh dấu đã phỏng vấn xong
+    CANCELED = 'CANCELED'         # business huỷ lịch
 
 class Interview(Base):
     __tablename__ = 'interviews'

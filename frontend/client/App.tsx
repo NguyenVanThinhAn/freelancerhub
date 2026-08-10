@@ -40,6 +40,7 @@ import BrowseJobs from "./pages/BrowseJobs";
 import TaxEstimation from "./pages/TaxEstimation";
 import MyProjects from "./pages/MyProjects";
 import Pricing from "./pages/Pricing";
+import MyInterviews from "./pages/MyInterviews";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -133,6 +134,14 @@ const App = () => (
               }
             />
             <Route
+              path="/interview-scheduler/:id"
+              element={
+                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
+                  <InterviewScheduler />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/interview-scheduler"
               element={
                 <ProtectedRoute allowedRoles={["business", "enterprise"]}>
@@ -201,6 +210,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={["freelancer"]}>
                   <TrustPassportPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-interviews"
+              element={
+                <ProtectedRoute allowedRoles={["freelancer"]}>
+                  <MyInterviews />
                 </ProtectedRoute>
               }
             />

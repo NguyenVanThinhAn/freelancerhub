@@ -24,5 +24,10 @@ class InterviewOut(BaseModel):
     note: Optional[str]
     status: InterviewStatus
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
+
+
+class InterviewStatusUpdate(BaseModel):
+    status: InterviewStatus
+    note: Optional[str] = None  # freelancer có thể thêm lý do decline / note khi confirm

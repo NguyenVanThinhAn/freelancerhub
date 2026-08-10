@@ -3,7 +3,7 @@ import { BriefcaseBusiness, CalendarDays, Check, ChevronLeft, ChevronRight, File
 import { useNavigate, useParams } from "react-router-dom";
 import { BusinessShell } from "@/layout/BusinessShell";
 import { useProposal } from "@/hooks/use-proposals";
-import { useCreateInterview, useInterviews } from "@/hooks/use-interviews";
+import { useCreateInterview, useInterviews, INTERVIEW_STATUS_LABELS, INTERVIEW_STATUS_TONE, formatDateTime } from "@/hooks/use-interviews";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -193,6 +193,32 @@ export default function InterviewScheduler() {
         </section>
 
         <aside className="space-y-4">
+          {existingInterviews && existingInterviews.length > 0 && (
+            <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-xs font-extrabold">Lịch đã gửi ({existingInterviews.length})</h2>
+              </div>
+              <div className="space-y-2">
+                {existingInterviews.map((iv) => {
+                  const tone = INTERVIEW_STATUS_TONE[iv.status];
+                  return (
+                    <div key={iv.id} className="rounded-lg border border-slate-100 p-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-700">{formatDateTime(iv.start_time)}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[8px] font-semibold ${tone.bg} ${tone.text}`}>
+                          {INTERVIEW_STATUS_LABELS[iv.status]}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[9px] text-slate-400">
+                        {iv.interview_type} · {iv.duration_minutes}p · {iv.platform || "—"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
             <h2 className="text-xs font-extrabold">Tóm tắt lịch mời</h2>
             <div className="mt-4 space-y-3 text-[10px]">
