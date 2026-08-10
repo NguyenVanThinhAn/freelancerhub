@@ -1,24 +1,63 @@
-import { Check, ChevronRight, FileText, Link2, Mail, MapPin, MessageCircle, Phone, Sparkles, Star, Loader2 } from "lucide-react";
+import { ChevronRight, FileText, Link2, MessageCircle, Star } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BusinessShell } from "@/layout/BusinessShell";
-import { useProposal } from "@/hooks/use-proposals";
+import { useProposal, useExplainMatch } from "@/hooks/use-proposals";
 import { Skeleton } from "@/components/ui/skeleton";
 
-function ScoreBars({ onExplain, matchData }: { onExplain: () => void, matchData?: any }) {
-  // We'll leave the matching UI static or pseudo-random if matchData is missing for now, 
-  // since the user has to click "Xem giải thích AI" to actually trigger explainable matching page.
-  // We could also call useExplainMatch here, but let's keep it simple and just show the link.
+function scoreTone(score: number | undefined): { bar: string; chip: string; label: string } {
+  if (score == null) return { bar: "bg-slate-200", chip: "bg-slate-100 text-slate-500", label: "Đang chờ AI" };
+  if (score >= 80) return { bar: "bg-emerald-500", chip: "bg-emerald-50 text-emerald-600", label: "Rất phù hợp" };
+  if (score >= 65) return { bar: "bg-indigo-500", chip: "bg-indigo-50 text-indigo-600", label: "Phù hợp" };
+  if (score >= 50) return { bar: "bg-amber-500", chip: "bg-amber-50 text-amber-600", label: "Cân nhắc" };
+  return { bar: "bg-rose-500", chip: "bg-rose-50 text-rose-600", label: "Yếu" };
+}
+
+function ScoreBars({ onExplain, score, factors, isLoading }: { onExplain: () => void; score?: number; factors?: { hard_skills: number; experience: number; domain_fit: number; communication: number; salary_fit: number }; isLoading: boolean }) {
+  const tone = scoreTone(score);
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-extrabold">AI Matching tổng quan</h2>
-        <span className="text-lg font-extrabold text-indigo-600">
-          ? <span className="text-[10px] text-slate-400">/100</span>
-        </span>
+        {isLoading ? (
+          <Skeleton className="h-7 w-16 rounded-md" />
+        ) : (
+          <span className="text-xl font-extrabold text-indigo-600">
+            {score ?? "—"}
+            <span className="text-[10px] text-slate-400">/100</span>
+          </span>
+        )}
       </div>
       <p className="mt-3 text-[10px] text-slate-500">
-        Hệ thống AI chưa phân tích. Vui lòng xem chi tiết đánh giá để biết thêm.
+        {isLoading
+          ? "Hệ thống AI đang phân tích hồ sơ…"
+          : score != null
+          ? `Mức độ phù hợp tổng thể — ${tone.label.toLowerCase()}.`
+          : "Hệ thống AI chưa phân tích. Vui lòng xem chi tiết đánh giá để biết thêm."}
       </p>
+
+      {factors && (
+        <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
+          {[
+            ["Hard skills", factors.hard_skills],
+            ["Kinh nghiệm", factors.experience],
+            ["Domain fit", factors.domain_fit],
+            ["Giao tiếp", factors.communication],
+            ["Salary fit", factors.salary_fit],
+          ].map(([label, value]) => (
+            <div key={label as string} className="flex items-center gap-2">
+              <span className="w-20 text-[9px] text-slate-500">{label}</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className={`h-full ${scoreTone(value as number).bar}`}
+                  style={{ width: `${value as number}%` }}
+                />
+              </div>
+              <span className="w-7 text-right text-[9px] font-semibold text-slate-500">{value as number}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <button onClick={onExplain} className="mt-4 w-full text-right text-[10px] font-bold text-indigo-600">
         Xem giải thích AI Matching →
       </button>
@@ -30,6 +69,7 @@ export default function CandidateDetail() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { data: proposal, isLoading, error } = useProposal(id);
+  const { data: explain, isLoading: isLoadingExplain } = useExplainMatch(id);
 
   if (isLoading) {
     return (
@@ -98,14 +138,20 @@ export default function CandidateDetail() {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-            <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-white">
-              <b className="text-lg text-slate-400">?</b>
-              <span className="text-[8px] text-slate-400">phù hợp</span>
-            </div>
+            {isLoadingExplain ? (
+              <Skeleton className="h-12 w-12 rounded-full" />
+            ) : (
+              <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-white">
+                <b className={`text-base ${explain?.fit_score != null ? "text-indigo-600" : "text-slate-400"}`}>
+                  {explain?.fit_score ?? "—"}
+                </b>
+                <span className="text-[8px] text-slate-400">phù hợp</span>
+              </div>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <button
-              onClick={() => navigate(`/interview-scheduler/${id}`)}
+              onClick={() => navigate("/interview-scheduler")}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-[10px] font-bold text-white"
             >
               <MessageCircle size={12} className="mr-1 inline" />
@@ -194,7 +240,12 @@ export default function CandidateDetail() {
         </div>
 
         <aside className="space-y-4">
-          <ScoreBars onExplain={() => navigate(`/explainable-matching/${proposal.id}`)} />
+          <ScoreBars
+            onExplain={() => navigate(`/explainable-matching/${proposal.id}`)}
+            score={explain?.fit_score}
+            factors={explain?.factors}
+            isLoading={isLoadingExplain}
+          />
 
           <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
             <h2 className="text-xs font-extrabold">Tài liệu ứng viên</h2>
