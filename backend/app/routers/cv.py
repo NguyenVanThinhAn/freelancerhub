@@ -81,10 +81,15 @@ async def upload_cv(
         FrelancerProfile.user_id == current_user.id
     ).first()
     if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Không tìm thấy freelancer profile. Vui lòng hoàn thiện profile trước."
+        # Auto-create freelancer profile if it doesn't exist (graceful fix)
+        profile = FrelancerProfile(
+            user_id=current_user.id,
+            display_name=current_user.email.split("@")[0],
         )
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+        logger.info(f"Auto-created FrelancerProfile for user: {current_user.id}")
     freelancer_id = profile.user_id
 
     """

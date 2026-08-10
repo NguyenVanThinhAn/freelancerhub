@@ -158,8 +158,16 @@ export default function ProjectWorkspace() {
           </div>
         </section>
       ) : (
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          <p className="text-center text-xs text-slate-400">Không tìm thấy hợp đồng.</p>
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-sm text-center">
+          <p className="text-sm font-semibold text-slate-400 mb-1">Chưa có dự án nào</p>
+          <p className="text-[11px] text-slate-400 mb-5">Hãy tìm việc phù hợp và bắt đầu dự án đầu tiên của bạn</p>
+          <button
+            type="button"
+            onClick={() => navigate("/jobs/browse")}
+            className="rounded-lg bg-indigo-600 px-5 py-2.5 text-[11px] font-bold text-white hover:bg-indigo-700"
+          >
+            Tìm việc ngay
+          </button>
         </section>
       )}
 

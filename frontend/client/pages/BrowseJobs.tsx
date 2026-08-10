@@ -17,6 +17,10 @@ import {
   Loader2,
   CheckCircle2,
   Wallet,
+  Eye,
+  Briefcase,
+  CalendarDays,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/hooks/use-wallet";
@@ -62,6 +66,7 @@ export default function BrowseJobs() {
   const [categoryId, setCategoryId] = useState("");
   const [paymentType, setPaymentType] = useState("");
   const [applyJobId, setApplyJobId] = useState<string | null>(null);
+  const [viewDetailJobId, setViewDetailJobId] = useState<string | null>(null);
   const [coverLetter, setCoverLetter] = useState("");
   const [bidAmount, setBidAmount] = useState("");
   const [duration, setDuration] = useState("");
@@ -249,20 +254,29 @@ export default function BrowseJobs() {
 
                 <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
                   <span className="text-[9px] text-slate-400">JD-{job.id.slice(0, 8).toUpperCase()}</span>
-                  {hasApplied ? (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                      <CheckCircle2 size={12} /> Đã ứng tuyển
-                    </span>
-                  ) : (
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => openApply(job.id)}
-                      disabled={job.status !== "OPEN"}
-                      className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => setViewDetailJobId(job.id)}
+                      className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-600 hover:bg-slate-50"
                     >
-                      <Send size={11} /> Ứng tuyển ngay
+                      <Eye size={11} /> Xem chi tiết
                     </button>
-                  )}
+                    {hasApplied ? (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                        <CheckCircle2 size={12} /> Đã ứng tuyển
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openApply(job.id)}
+                        disabled={job.status !== "OPEN"}
+                        className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Send size={11} /> Ứng tuyển ngay
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>
             );
@@ -360,6 +374,104 @@ export default function BrowseJobs() {
           </div>
         </div>
       )}
+
+      {/* Job Detail Modal */}
+      {viewDetailJobId && (() => {
+        const job = filtered.find((j) => j.id === viewDetailJobId);
+        if (!job) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-slate-100 bg-white px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                    <BriefcaseBusiness size={18} />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400">JD-{job.id.slice(0, 8).toUpperCase()}</span>
+                    <h3 className="text-[15px] font-extrabold leading-tight">{job.title}</h3>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setViewDetailJobId(null)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6 space-y-5">
+                {/* Status + meta */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className={`rounded-full px-3 py-1 text-[10px] font-bold ${
+                    STATUS_TONE[job.status] ?? "bg-slate-100 text-slate-500"
+                  }`}>
+                    {STATUS_LABEL[job.status] ?? job.status}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <Tag size={10} /> {job.payment_type === "FIXED" ? "Giá cố định" : "Theo giờ"}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <CalendarDays size={10} /> {formatRelative(job.created_at)}
+                  </span>
+                </div>
+
+                {/* Budget */}
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+                  <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wide mb-1">Ngân sách</p>
+                  <p className="text-[18px] font-extrabold text-emerald-700">{formatBudgetRange(job.budget_min, job.budget_max)}</p>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <h4 className="mb-2 text-[11px] font-bold text-slate-700">Mô tả công việc</h4>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                    <p className="text-[12px] leading-relaxed text-slate-700 whitespace-pre-wrap">{job.description}</p>
+                  </div>
+                </div>
+
+                {/* Skills */}
+                {job.skills && job.skills.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-[11px] font-bold text-slate-700">Kỹ năng yêu cầu</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {job.skills.map((s) => (
+                        <span
+                          key={s.id}
+                          className="rounded-full bg-indigo-50 px-3 py-1.5 text-[10px] font-semibold text-indigo-600"
+                        >
+                          {s.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Category */}
+                <div className="text-[10px] text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <Briefcase size={10} /> {job.category_id ? `Danh mục: ${job.category_id.slice(0,8)}` : "—"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="sticky bottom-0 z-10 flex items-center justify-end gap-3 rounded-b-2xl border-t border-slate-100 bg-white px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => { setViewDetailJobId(null); openApply(job.id); }}
+                  disabled={job.status !== "OPEN" || appliedJobIds.has(job.id)}
+                  className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-[11px] font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Send size={12} /> Ứng tuyển ngay
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </BusinessShell>
   );
 }

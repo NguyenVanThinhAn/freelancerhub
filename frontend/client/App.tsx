@@ -37,6 +37,9 @@ import Messages from "./pages/Messages";
 import ProposalDetail from "./pages/ProposalDetail";
 import Disputes from "./pages/Disputes";
 import BrowseJobs from "./pages/BrowseJobs";
+import TaxEstimation from "./pages/TaxEstimation";
+import MyProjects from "./pages/MyProjects";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -202,6 +205,14 @@ const App = () => (
               }
             />
             <Route
+              path="/tax-estimation"
+              element={
+                <ProtectedRoute allowedRoles={["freelancer"]}>
+                  <TaxEstimation />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/freelancer/profile"
               element={
                 <ProtectedRoute allowedRoles={["freelancer"]}>
@@ -228,10 +239,18 @@ const App = () => (
               }
             />
             <Route
-              path="/proposals/:id"
+              path="/my-projects"
               element={
-                <ProtectedRoute allowedRoles={["business", "enterprise"]}>
-                  <ProposalDetail />
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise"]}>
+                  <MyProjects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pricing"
+              element={
+                <ProtectedRoute allowedRoles={["freelancer", "business", "enterprise"]}>
+                  <Pricing />
                 </ProtectedRoute>
               }
             />

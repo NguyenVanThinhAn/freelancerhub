@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
 from app.models.cv_documents import DocumentStatusEnum, TaskStatusEnum, TaskTypeEnum
 
 # ==============================================================================
@@ -85,7 +85,13 @@ class CVFieldReviewChange(BaseModel):
     """
     Schema cấu hình 1 ô dữ liệu Freelancer muốn chỉnh sửa hoặc xác nhận.
     """
-    field_path: str = Field(..., alias="fieldPath", description="Đường dẫn trường cần sửa (vd: personalInfo.email)")
+    # validation_alias: accept both snake_case (frontend) and camelCase
+    field_path: str = Field(
+        ...,
+        validation_alias=AliasChoices("field_path", "fieldPath"),
+        serialization_alias="fieldPath",
+        description="Đường dẫn trường cần sửa (vd: personalInfo.email)"
+    )
     value: Any = Field(..., description="Giá trị mới do Freelancer cập nhật")
     action: str = Field("EDIT", description="Hành động: CONFIRM hoặc EDIT")
 

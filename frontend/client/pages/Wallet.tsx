@@ -1,9 +1,18 @@
 import { useState } from "react";
-import { ArrowUpRight, Banknote, ChevronLeft, ChevronRight, CreditCard, FileDown, Loader2, Plus, ShieldCheck, WalletCards, X } from "lucide-react";
+import { ArrowUpRight, Banknote, ChevronLeft, ChevronRight, CreditCard, FileDown, Loader2, Plus, ShieldCheck, WalletCards, X, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BusinessShell } from "@/layout/BusinessShell";
 import { useWallet, useTransactions, useContractProjects, useDeposit, useWithdraw, formatCurrency, TX_TYPE_LABELS } from "@/hooks/use-wallet";
 import { toast } from "sonner";
+
+const TX_Badge_TONE: Record<string, string> = {
+  DEPOSIT: "bg-emerald-50 text-emerald-600",
+  WITHDRAWAL: "bg-rose-50 text-rose-600",
+  ESCROW_LOCK: "bg-amber-50 text-amber-600",
+  ESCROW_RELEASE: "bg-violet-50 text-violet-600",
+  PAYMENT_SENT: "bg-rose-50 text-rose-600",
+  PAYMENT_RECEIVED: "bg-emerald-50 text-emerald-600",
+};
 
 type WalletTab = "overview" | "history" | "withdraw" | "deposit";
 
@@ -15,7 +24,7 @@ export default function Wallet() {
 
   const navigate = useNavigate();
   const { data: wallet, isLoading: walletLoading } = useWallet();
-  const { data: transactions, isLoading: txLoading } = useTransactions(10);
+  const { data: transactions, isLoading: txLoading } = useTransactions(50, { refetchInterval: 5000 });
   const { data: projects, isLoading: projectsLoading } = useContractProjects();
   const deposit = useDeposit();
   const withdraw = useWithdraw();
@@ -54,7 +63,10 @@ export default function Wallet() {
       </div>
       <nav className="mb-5 flex gap-6 border-b border-slate-200 text-[10px] font-semibold text-slate-400">
         <button type="button" onClick={() => setActiveTab("overview")} className={`pb-3 ${activeTab === "overview" ? "border-b-2 border-indigo-600 text-indigo-600" : ""}`}>Tổng quan</button>
-        <button type="button" onClick={() => setActiveTab("history")} className={`pb-3 ${activeTab === "history" ? "border-b-2 border-indigo-600 text-indigo-600" : ""}`}>Lịch sử giao dịch</button>
+        <button type="button" onClick={() => setActiveTab("history")} className={`pb-3 ${activeTab === "history" ? "border-b-2 border-indigo-600 text-indigo-600" : ""}`}>
+          Lịch sử giao dịch
+          <RefreshCw size={9} className="ml-1 inline animate-spin text-emerald-400" />
+        </button>
         <button type="button" onClick={openWithdraw} className={`pb-3 ${activeTab === "withdraw" ? "border-b-2 border-indigo-600 text-indigo-600" : ""}`}>Rút tiền</button>
         <button type="button" onClick={openDeposit} className={`pb-3 ${activeTab === "deposit" ? "border-b-2 border-indigo-600 text-indigo-600" : ""}`}>Nạp tiền</button>
       </nav>
@@ -167,7 +179,11 @@ export default function Wallet() {
                     return (
                     <tr key={tx.id} className="border-b border-slate-50">
                       <td className="py-3 text-slate-500">{new Date(tx.created_at).toLocaleString("vi-VN")}</td>
-                      <td className="font-semibold">{TX_TYPE_LABELS[tx.transaction_type] ?? tx.transaction_type}</td>
+                      <td>
+                        <span className={`rounded-full px-2.5 py-1 text-[8px] font-bold ${TX_Badge_TONE[tx.transaction_type] ?? "bg-slate-100 text-slate-500"}`}>
+                          {TX_TYPE_LABELS[tx.transaction_type] ?? tx.transaction_type}
+                        </span>
+                      </td>
                       <td>{tx.description ?? tx.reference_id ?? "—"}</td>
                       <td className={`font-bold ${isPositive ? "text-emerald-600" : "text-rose-500"}`}>{sign}{formatCurrency(tx.amount)}</td>
                       <td>—</td>

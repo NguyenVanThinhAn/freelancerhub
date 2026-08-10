@@ -68,6 +68,7 @@ def seed_test_accounts():
     import uuid
     from datetime import datetime, timezone as dt_tz
     from app.models.users import User, UserStatus, UserRole
+    from app.models.freelancers import FrelancerProfile
     from app.core.security import hash_password
 
     db = LocalSession()
@@ -82,6 +83,7 @@ def seed_test_accounts():
                 "email": "freelancer@example.com",
                 "password": "Freelancer@123",
                 "role": UserRole.freelancer,
+                "profile": {"display_name": "Test Freelancer"},
             },
             {
                 "email": "business@example.com",
@@ -105,6 +107,18 @@ def seed_test_accounts():
                 role=acc["role"],
             )
             db.add(user)
+            db.flush()
+
+            # Auto-create freelancer profile if role is freelancer
+            if acc["role"] == UserRole.freelancer:
+                profile_data = acc.get("profile", {})
+                profile = FrelancerProfile(
+                    user_id=user.id,
+                    display_name=profile_data.get("display_name", user.email.split("@")[0]),
+                )
+                db.add(profile)
+                print(f"[seed] Đã tạo FrelancerProfile cho: {acc['email']}")
+
             print(f"[seed] Đã tạo: {acc['email']} / {acc['password']} ({acc['role'].value})")
 
         db.commit()

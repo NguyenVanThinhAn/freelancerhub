@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiGet, apiPost } from "@/api/client";
 import type { ApiError } from "@/types/api";
@@ -56,11 +56,12 @@ export function useWallet() {
   });
 }
 
-export function useTransactions(limit = 50) {
+export function useTransactions(limit = 50, options?: Pick<UseQueryOptions, 'refetchInterval'>) {
   return useQuery({
     queryKey: [QK_WALLET_TRANSACTIONS, limit],
     queryFn: () => apiGet<Transaction[]>(`${ENDPOINT_WALLET_TRANSACTIONS}?limit=${limit}`),
     staleTime: 30_000,
+    ...options,
   });
 }
 

@@ -2,6 +2,7 @@ import { ChevronRight, X, type LucideIcon } from "lucide-react";
 import {
   Activity,
   BriefcaseBusiness,
+  Calculator,
   CalendarDays,
   FileText,
   LayoutDashboard,
@@ -47,15 +48,33 @@ const navItems: NavItem[] = [
     allowedRoles: ["freelancer", "business", "enterprise"],
   },
   {
-    label: "Cài đặt",
+    label: "Hồ sơ cá nhân",
     icon: Settings,
     route: "/settings",
     allowedRoles: ["freelancer", "business", "enterprise"],
   },
   {
+    label: "Ước tính thuế",
+    icon: Calculator,
+    route: "/tax-estimation",
+    allowedRoles: ["freelancer"],
+  },
+  {
     label: "Tìm việc",
     icon: Search,
     route: "/jobs/browse",
+    allowedRoles: ["freelancer", "business", "enterprise"],
+  },
+  {
+    label: "Dự án của tôi",
+    icon: BriefcaseBusiness,
+    route: "/my-projects",
+    allowedRoles: ["freelancer", "business", "enterprise"],
+  },
+  {
+    label: "Nâng cấp gói",
+    icon: Sparkles,
+    route: "/pricing",
     allowedRoles: ["freelancer", "business", "enterprise"],
   },
 

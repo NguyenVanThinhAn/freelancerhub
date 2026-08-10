@@ -35,6 +35,7 @@ export interface Milestone {
 export interface ContractListItem {
   id: string;
   job_id: string;
+  description?: string;
   freelancer_id: string;
   organization_id: string;
   total_amount: number;

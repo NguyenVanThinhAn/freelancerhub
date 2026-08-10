@@ -8,8 +8,15 @@ import {
   Calendar,
   Hash,
   FileBadge,
+  Plus,
+  X,
+  Upload,
+  Loader2,
+  Clock,
 } from "lucide-react";
 import { BusinessShell } from "@/layout/BusinessShell";
+import { useState, useRef } from "react";
+import { toast } from "sonner";
 
 function formatValue(v: unknown): string {
   if (v == null) return "—";
@@ -101,6 +108,9 @@ export function TrustPassportPage() {
               </div>
             )}
           </section>
+
+          {/* Certificates section */}
+          <CertificatesSection />
         </div>
 
         <aside className="space-y-4">
@@ -260,6 +270,180 @@ function HowItWorks() {
           );
         })}
       </ol>
+    </section>
+  );
+}
+
+// ─── Certificates Section ────────────────────────────────────────────────────
+
+const CERT_STATUS_TONE: Record<string, string> = {
+  UPLOADED: "bg-slate-100 text-slate-500",
+  PENDING: "bg-amber-50 text-amber-600",
+  APPROVED: "bg-emerald-50 text-emerald-600",
+  REJECTED: "bg-rose-50 text-rose-600",
+};
+
+const CERT_STATUS_LABEL: Record<string, string> = {
+  UPLOADED: "Mới tải lên",
+  PENDING: "Chờ duyệt",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Từ chối",
+};
+
+interface CertificateItem {
+  id: string;
+  title: string;
+  issuer: string;
+  issueDate: string;
+  status: string;
+  createdAt: string;
+}
+
+// Mock data — replace with real API when backend supports list certificates
+const MOCK_CERTS: CertificateItem[] = [];
+
+function CertificatesSection() {
+  const [showForm, setShowForm] = useState(false);
+  const [certs, setCerts] = useState<CertificateItem[]>(MOCK_CERTS);
+  const [uploading, setUploading] = useState(false);
+  const [certName, setCertName] = useState("");
+  const [certIssuer, setCertIssuer] = useState("");
+  const [certDate, setCertDate] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!certName.trim()) { toast.error("Vui lòng nhập tên chứng chỉ"); return; }
+    setUploading(true);
+
+    // Simulate upload — replace with real API call when backend supports
+    await new Promise((r) => setTimeout(r, 1200));
+    const newCert: CertificateItem = {
+      id: crypto.randomUUID(),
+      title: certName,
+      issuer: certIssuer,
+      issueDate: certDate,
+      status: "PENDING",
+      createdAt: new Date().toISOString(),
+    };
+    setCerts((prev) => [newCert, ...prev]);
+    setCertName(""); setCertIssuer(""); setCertDate("");
+    setSelectedFile(null);
+    setShowForm(false);
+    setUploading(false);
+    toast.success("Đã gửi chứng chỉ chờ Admin duyệt!");
+  };
+
+  return (
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_6px_20px_rgba(55,65,120,0.04)]">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="flex items-center gap-2 text-[13px] font-extrabold text-slate-900">
+            <Award size={14} className="text-indigo-500" />
+            Chứng chỉ nghề nghiệp
+          </h2>
+          <p className="mt-1 text-[10px] text-slate-400">
+            Upload chứng chỉ (IELTS, AWS, PMP...) để Admin phê duyệt. Mỗi chứng chỉ được duyệt → +5 điểm Trust Score.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-[10px] font-bold text-white hover:bg-indigo-700"
+        >
+          <Plus size={11} /> Thêm chứng chỉ
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-[10px] font-bold text-slate-700">Tên chứng chỉ <b className="text-rose-500">*</b></label>
+              <input
+                value={certName}
+                onChange={(e) => setCertName(e.target.value)}
+                placeholder="VD: AWS Solutions Architect"
+                className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold text-slate-700">Tổ chức cấp</label>
+              <input
+                value={certIssuer}
+                onChange={(e) => setCertIssuer(e.target.value)}
+                placeholder="VD: Amazon Web Services"
+                className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold text-slate-700">Ngày cấp</label>
+              <input
+                type="date"
+                value={certDate}
+                onChange={(e) => setCertDate(e.target.value)}
+                className="h-9 w-full rounded-lg border border-slate-200 px-3 text-[11px] outline-none focus:border-indigo-300"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold text-slate-700">File minh chứng (PDF/PNG/JPG)</label>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={handleFileChange}
+                className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] file:mr-2 file:font-bold file:text-indigo-600 file:text-[10px]"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50">
+              Hủy
+            </button>
+            <button type="submit" disabled={uploading} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-[10px] font-bold text-white hover:bg-indigo-700 disabled:opacity-50">
+              {uploading ? <><Loader2 size={11} className="animate-spin" /> Đang gửi...</> : <><Upload size={11} /> Gửi duyệt</>}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {certs.length === 0 && !showForm ? (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/30 p-6 text-center">
+          <Award size={28} className="mx-auto mb-2 text-slate-300" />
+          <p className="text-[11px] font-semibold text-slate-500">Chưa có chứng chỉ nào</p>
+          <p className="mt-1 text-[10px] text-slate-400">Bấm "Thêm chứng chỉ" để upload chứng chỉ nghề nghiệp của bạn</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {certs.map((cert) => (
+            <div key={cert.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                <Award size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-bold text-slate-900">{cert.title}</p>
+                <p className="mt-0.5 text-[9px] text-slate-400">
+                  {cert.issuer && <span>{cert.issuer} · </span>}
+                  {cert.issueDate && <span>Ngày cấp: {new Date(cert.issueDate).toLocaleDateString("vi-VN")} · </span>}
+                  {new Date(cert.createdAt).toLocaleDateString("vi-VN")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${CERT_STATUS_TONE[cert.status] ?? "bg-slate-100 text-slate-500"}`}>
+                  {cert.status === "PENDING" && <Clock size={9} className="mr-1 inline" />}
+                  {cert.status === "APPROVED" && <CheckCircle2 size={9} className="mr-1 inline" />}
+                  {CERT_STATUS_LABEL[cert.status] ?? cert.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
