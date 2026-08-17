@@ -1,0 +1,14 @@
+from .users import router as users
+from .auth import router as auth
+from .profiles import router as profiles
+from .communications import router as communications
+from .admin_system import router as admin_system
+from .email_verification import router as email_verification
+from .cv import router as cv_router
+from .admin_cv import router as admin_cv_router
+from .jobs import router as jobs_router
+from .proposals import router as proposals_router
+from .contracts import router as contracts_router
+from .finance import router as finance_router
+from .disputes import router as disputes_router
+from .shortlists import router as shortlists_router

@@ -1,0 +1,43 @@
+from .users import User, UserStatus, UserRole
+from .freelancers import FrelancerProfile
+from .organizations import Organization
+from .refresh_tokens import RefreshToken
+from .email_verification_tokens import EmailVerificationToken
+from .password_reset_tokens import PasswordResetToken
+from .skills import Skill
+from .freelancer_skills import FreelancerSkill
+from .portfolio_items import PortfolioItem
+from .notifications import Notification, NotificationType
+from .chat_threads import ChatThread
+from .chat_messages import ChatMessage
+from .thread_participants import ThreadParticipant
+from .ai_usage_quotas import AIUsageQuota
+
+from .cv_documents import CVDocument, CVParseTask
+from .cv_results import CVParseResult, CVExtractedField, FieldEvidenceLevelEnum
+from .verifications import (
+    CVEvidence, 
+    VerificationCase, 
+    VerificationDecision, 
+    TrustPassportEntry,
+    EvidenceTypeEnum,
+    EvidenceStatusEnum,
+    VerificationCaseStatusEnum,
+    VerificationDecisionActionEnum
+)
+
+from .categories import Category
+from .jobs import Job, JobSkill, JobPaymentType, JobStatus
+from .proposals import Proposal, ProposalStatus
+from .contracts import Contract, Milestone, Deliverable, ContractStatus, MilestoneStatus, DeliverableStatus
+from .finance import Wallet, Transaction, TransactionType, TransactionStatus
+from .disputes import Dispute, DisputeEvidence, DisputeStatus
+from .shortlists import Shortlist
+from .admin import Role, Permission, RolePermission, ContentReport, ContentReportStatus
+from .ai import MatchResult, AIArtifact, AIQuotaPlan, AIUsageLog
+from .contact_info_exchanges import ContactInfoExchange, ContactPattern, ExchangeStatus
+
+# Update missing from existing imports
+from .users import OAuthAccount
+from .contracts import Rating
+from .finance import EscrowAccount
